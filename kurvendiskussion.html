@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kurvendiskussion</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── Page-specific overrides ── */
+:root {
+  --surface2: #edeae2;
+  --surface3: #e5e1d8;
+  --border:   rgba(0,0,0,0.10);
+  --border2:  rgba(0,0,0,0.18);
+  --accent:   var(--red);
+  --step-dot: var(--red);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface2: #221f18;
+    --surface3: #2a2720;
+    --border:   rgba(255,255,255,0.08);
+    --border2:  rgba(255,255,255,0.16);
+  }
+}
+
+.page { max-width: 900px; }
+
+/* Header */
+header h1 { font-family: 'Lora', serif; font-size: 30px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 4px; }
+header h1 em { font-style: italic; color: var(--accent); }
+
+/* Function selector */
+.func-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 0.5px solid var(--border2); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
+.func-bar label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.func-bar select { flex: 1; min-width: 200px; margin-bottom: 0; background-color: var(--surface2); border-color: var(--border2); }
+.func-display { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; color: var(--accent); background: rgba(184,64,32,0.10); border-radius: 7px; padding: 5px 12px; white-space: nowrap; }
+
+/* Step nav */
+.steps-nav { display: flex; gap: 0; margin-bottom: 20px; border: 0.5px solid var(--border2); border-radius: 12px; overflow: hidden; background: var(--surface2); }
+.step-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 6px; border: none; background: transparent; cursor: pointer; transition: background .15s; border-right: 0.5px solid var(--border); font-family: 'DM Sans', sans-serif; gap: 3px; }
+.step-btn:last-child { border-right: none; }
+.step-btn:hover { background: var(--surface3); }
+.step-btn.active { background: var(--surface); }
+.step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--surface3); color: var(--hint); font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+.step-btn.active .step-num { background: var(--accent); color: #fff; }
+.step-btn.done .step-num { background: var(--green); color: #fff; }
+.step-label { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.3; }
+.step-btn.active .step-label { color: var(--text); font-weight: 500; }
+@media (max-width: 600px) { .step-label { display: none; } .step-btn { padding: 10px 4px; } }
+
+/* Card title */
+.card-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card-title .ct-badge { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; background: var(--surface2); color: var(--hint); border-radius: 5px; padding: 2px 7px; }
+
+/* Formula steps */
+.fstep { display: flex; flex-direction: column; gap: 4px; padding: 10px 14px; background: var(--surface2); border-radius: 9px; margin-bottom: 8px; border-left: 3px solid var(--border2); }
+.fstep.highlight { border-left-color: var(--accent); background: rgba(184,64,32,0.07); }
+.fstep.blue   { border-left-color: var(--blue);   background: rgba(26,86,150,0.07); }
+.fstep.green  { border-left-color: var(--green);  background: rgba(30,110,58,0.07); }
+.fstep.purple { border-left-color: var(--purple); background: rgba(107,58,158,0.07); }
+.fstep.amber  { border-left-color: var(--amber);  background: rgba(138,90,0,0.07); }
+.fstep.teal   { border-left-color: var(--teal);   background: rgba(14,110,110,0.07); }
+.fstep-label { font-size: 11px; color: var(--hint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+.fstep-formula { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text); line-height: 1.6; }
+.fstep-formula span.acc { color: var(--accent); }
+.fstep-formula span.blu { color: var(--blue); }
+.fstep-formula span.grn { color: var(--green); }
+.fstep-formula span.pur { color: var(--purple); }
+.fstep-formula span.amb { color: var(--amber); }
+.fstep-formula span.tel { color: var(--teal); }
+.fstep-explain { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 2px; }
+
+/* Result pills */
+.results-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.rpill { font-family: 'DM Mono', monospace; font-size: 13px; padding: 4px 11px; border-radius: 7px; border: 0.5px solid var(--border2); background: var(--surface2); color: var(--text); }
+.rpill.acc { background: rgba(184,64,32,0.12); border-color: transparent; color: var(--accent); }
+.rpill.blu { background: rgba(26,86,150,0.12); border-color: transparent; color: var(--blue); }
+.rpill.grn { background: rgba(30,110,58,0.12); border-color: transparent; color: var(--green); }
+.rpill.pur { background: rgba(107,58,158,0.12); border-color: transparent; color: var(--purple); }
+.rpill.amb { background: rgba(138,90,0,0.12);  border-color: transparent; color: var(--amber); }
+.rpill.tel { background: rgba(14,110,110,0.12); border-color: transparent; color: var(--teal); }
+@media (prefers-color-scheme: dark) {
+  .rpill.acc { background: rgba(224,96,64,0.15);   color: var(--accent); }
+  .rpill.blu { background: rgba(91,163,232,0.15);  color: var(--blue); }
+  .rpill.grn { background: rgba(78,194,122,0.15);  color: var(--green); }
+  .rpill.pur { background: rgba(176,122,224,0.15); color: var(--purple); }
+  .rpill.amb { background: rgba(240,176,64,0.15);  color: var(--amber); }
+  .rpill.tel { background: rgba(62,206,206,0.15);  color: var(--teal); }
+}
+
+/* Summary table */
+.sum-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sum-table th { text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--hint); padding: 6px 10px; border-bottom: 0.5px solid var(--border2); }
+.sum-table td { padding: 7px 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+.sum-table tr:last-child td { border-bottom: none; }
+.sum-table .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Kurven<em>diskussion</em></h1>
+  <p>Schritt für Schritt vom Funktionsterm zur gezeichneten Kurve.</p>
+</header>
+
+<!-- Function selector -->
+<div class="func-bar">
+  <label>Funktion:</label>
+  <select id="func-sel" onchange="onFuncChange()">
+    <option value="0">f(x) = x³ − 3x  (kubisch, kein d-Term)</option>
+    <option value="1">f(x) = x³ − 12x  (kubisch, kein d-Term)</option>
+    <option value="2">f(x) = x³ − 3x² − 9x + 2  (kubisch, vollständig)</option>
+    <option value="3">f(x) = x² − 4x + 3  (quadratisch, Parabel)</option>
+    <option value="4">f(x) = −x³ + 4x  (kubisch, negativ, kein d-Term)</option>
+  </select>
+  <span class="func-display" id="func-display">f(x) = x³ − 3x² + 2</span>
+</div>
+
+<!-- Step navigation -->
+<div class="steps-nav">
+  <button class="step-btn active" id="sbn-0" onclick="goStep(0)">
+    <span class="step-num">1</span>
+    <span class="step-label">Definitions-<br>menge</span>
+  </button>
+  <button class="step-btn" id="sbn-1" onclick="goStep(1)">
+    <span class="step-num">2</span>
+    <span class="step-label">Null-<br>stellen</span>
+  </button>
+  <button class="step-btn" id="sbn-2" onclick="goStep(2)">
+    <span class="step-num">3</span>
+    <span class="step-label">Extrem-<br>punkte</span>
+  </button>
+  <button class="step-btn" id="sbn-3" onclick="goStep(3)">
+    <span class="step-num">4</span>
+    <span class="step-label">Wende-<br>punkt</span>
+  </button>
+  <button class="step-btn" id="sbn-4" onclick="goStep(4)">
+    <span class="step-num">5</span>
+    <span class="step-label">Wende-<br>tangente</span>
+  </button>
+  <button class="step-btn" id="sbn-5" onclick="goStep(5)">
+    <span class="step-num">6</span>
+    <span class="step-label">Zeichnung</span>
+  </button>
+</div>
+
+<!-- Panels -->
+<div id="panel-0" class="panel active"></div>
+<div id="panel-1" class="panel"></div>
+<div id="panel-2" class="panel"></div>
+<div id="panel-3" class="panel"></div>
+<div id="panel-4" class="panel"></div>
+<div id="panel-5" class="panel"></div>
+
+<footer>Kurvendiskussion · Polynomfunktionen</footer>
+</div>
+
+<script src="canvas-utils.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+// FUNCTION DEFINITIONS
+// ═══════════════════════════════════════════════
+const FUNCS = [
+  {
+    // Simple cubic, no constant term → x herausheben möglich
+    label: 'f(x) = x³ − 3x',
+    latex: 'f(x) = x³ − 3x',
+    f:  x => x**3 - 3*x,
+    f1: x => 3*x**2 - 3,
+    f2: x => 6*x,
+    f3: x => 6,
+    fStr:  'x³ − 3x',
+    f1Str: '3x² − 3',
+    f2Str: '6x',
+    degree: 3, leadPos: true, noConstant: true,
+    nullstellen: () => solveNumeric(x => x**3 - 3*x, -2.5, 2.5),
+    extrema: () => [
+      {x:-1, y:(-1)**3-3*(-1), type:'max'},
+      {x:1,  y:(1)**3-3*(1),   type:'min'}
+    ],
+    wendepunkt: () => ({ x:0, y:0 }),
+    abcA: 3, abcB: 0, abcC: -3,
+    xRange: [-2.5, 2.5], yRange: [-4, 4]
+  },
+  {
+    // Simple cubic, no constant term, larger extrema spread
+    label: 'f(x) = x³ − 12x',
+    latex: 'f(x) = x³ − 12x',
+    f:  x => x**3 - 12*x,
+    f1: x => 3*x**2 - 12,
+    f2: x => 6*x,
+    f3: x => 6,
+    fStr:  'x³ − 12x',
+    f1Str: '3x² − 12',
+    f2Str: '6x',
+    degree: 3, leadPos: true, noConstant: true,
+    nullstellen: () => solveNumeric(x => x**3 - 12*x, -4.5, 4.5),
+    extrema: () => [
+      {x:-2, y:(-2)**3-12*(-2), type:'max'},
+      {x:2,  y:(2)**3-12*(2),   type:'min'}
+    ],
+    wendepunkt: () => ({ x:0, y:0 }),
+    abcA: 3, abcB: 0, abcC: -12,
+    xRange: [-4.5, 4.5], yRange: [-18, 18]
+  },
+  {
+    // Full cubic with constant term
+    label: 'f(x) = x³ − 3x² − 9x + 2',
+    latex: 'f(x) = x³ − 3x² − 9x + 2',
+    f:  x => x**3 - 3*x**2 - 9*x + 2,
+    f1: x => 3*x**2 - 6*x - 9,
+    f2: x => 6*x - 6,
+    f3: x => 6,
+    fStr:  'x³ − 3x² − 9x + 2',
+    f1Str: '3x² − 6x − 9',
+    f2Str: '6x − 6',
+    degree: 3, leadPos: true, noConstant: false,
+    nullstellen: () => solveNumeric(x => x**3 - 3*x**2 - 9*x + 2, -3, 6),
+    extrema: () => [
+      {x:-1, y:(-1)**3-3*(-1)**2-9*(-1)+2, type:'max'},
+      {x:3,  y:(3)**3-3*(3)**2-9*(3)+2,    type:'min'}
+    ],
+    wendepunkt: () => ({ x:1, y:(1)**3-3*(1)**2-9*(1)+2 }),
+    abcA: 3, abcB: -6, abcC: -9,
+    xRange: [-3, 6], yRange: [-26, 14]
+  },
+  {
+    label: 'f(x) = x² − 4x + 3',
+    latex: 'f(x) = x² − 4x + 3',
+    f:  x => x**2 - 4*x + 3,
+    f1: x => 2*x - 4,
+    f2: x => 2,
+    f3: x => 0,
+    fStr:  'x² − 4x + 3',
+    f1Str: '2x − 4',
+    f2Str: '2',
+    degree: 2, leadPos: true, noConstant: false,
+    nullstellen: () => [{x:1,y:0},{x:3,y:0}],
+    extrema: () => [{x:2, y:-1, type:'min'}],
+    wendepunkt: () => null,
+    abcA: 1, abcB: -4, abcC: 3,
+    xRange: [-0.5, 5], yRange: [-2.5, 5]
+  },
+  {
+    // Negative leading coefficient, no constant term
+    label: 'f(x) = −x³ + 4x',
+    latex: 'f(x) = −x³ + 4x',
+    f:  x => -(x**3) + 4*x,
+    f1: x => -3*(x**2) + 4,
+    f2: x => -6*x,
+    f3: x => -6,
+    fStr:  '−x³ + 4x',
+    f1Str: '−3x² + 4',
+    f2Str: '−6x',
+    degree: 3, leadPos: false, noConstant: true,
+    nullstellen: () => solveNumeric(x => -(x**3) + 4*x, -2.5, 2.5),
+    extrema: () => {
+      const xp = Math.sqrt(4/3);
+      return [
+        {x:-xp, y:-((-xp)**3)+4*(-xp), type:'min'},
+        {x: xp, y:-((xp)**3)+4*(xp),   type:'max'}
+      ];
+    },
+    wendepunkt: () => ({ x:0, y:0 }),
+    abcA: -3, abcB: 0, abcC: 4,
+    xRange: [-2.5, 2.5], yRange: [-4, 4]
+  }
+];
+
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+function solveNumeric(f, a, b, tol=1e-6) {
+  const roots = [];
+  const steps = 2000;
+  const dx = (b-a)/steps;
+  for (let i=0; i<steps; i++) {
+    const x1 = a+i*dx, x2=x1+dx;
+    if (f(x1)*f(x2) <= 0) {
+      let lo=x1, hi=x2;
+      for (let j=0;j<50;j++){const m=(lo+hi)/2; f(lo)*f(m)<=0?hi=m:lo=m;}
+      const r=(lo+hi)/2;
+      if (!roots.some(rx=>Math.abs(rx.x-r)<0.01)) roots.push({x:r,y:0});
+    }
+  }
+  return roots;
+}
+
+function fmt(v, d=4) {
+  if (!isFinite(v)) return '?';
+  const r = Math.round(v*1e6)/1e6;
+  if (Math.abs(r - Math.round(r)) < 1e-5) return String(Math.round(r));
+  return r.toFixed(d).replace(/\.?0+$/,'');
+}
+
+function fmtSign(v) {
+  const s = fmt(v);
+  return v >= 0 ? '+' + s : s;
+}
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let currentFunc = 0;
+let currentStep = 0;
+const maxVisited = [0];
+
+function onFuncChange() {
+  currentFunc = +document.getElementById('func-sel').value;
+  const fn = FUNCS[currentFunc];
+  document.getElementById('func-display').textContent = fn.label;
+  renderAll();
+}
+
+function goStep(n) {
+  currentStep = n;
+  if (!maxVisited.includes(n)) maxVisited.push(n);
+  document.querySelectorAll('.step-btn').forEach((b,i) => {
+    b.classList.toggle('active', i===n);
+    b.classList.toggle('done', i<n);
+  });
+  document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', i===n));
+  if (n===5) { setTimeout(()=>{initCanvas();drawCanvas();},30); }
+}
+
+function renderAll() {
+  const fn = FUNCS[currentFunc];
+  renderStep0(fn);
+  renderStep1(fn);
+  renderStep2(fn);
+  renderStep3(fn);
+  renderStep4(fn);
+  renderStep5(fn);
+}
+
+// ═══════════════════════════════════════════════
+// STEP 0 — Definitionsmenge
+// ═══════════════════════════════════════════════
+function renderStep0(fn) {
+  const p = document.getElementById('panel-0');
+  p.innerHTML = `
+  <div class="card">
+    <div class="card-title"><span class="ct-badge">Schritt 1</span> Definitionsmenge</div>
+    <div class="info">
+      Die <strong>Definitionsmenge D</strong> gibt an, für welche x-Werte die Funktion überhaupt berechnet werden kann.
+      Bei Polynomfunktionen gibt es keine Division durch null, keine Wurzeln und keine Logarithmen —
+      daher ist die Funktion für <strong>alle reellen Zahlen</strong> definiert.
+    </div>
+    <div class="fstep highlight">
+      <span class="fstep-label">Funktion</span>
+      <span class="fstep-formula"><span class="acc">f(x) = ${fn.fStr}</span></span>
+    </div>
+    <div class="fstep green">
+      <span class="fstep-label">Definitionsmenge</span>
+      <span class="fstep-formula"><span class="grn">D = ℝ</span> &nbsp; (alle reellen Zahlen)</span>
+      <span class="fstep-explain">Polynomfunktionen sind überall definiert — keine Einschränkungen.</span>
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Grad &amp; Verhalten</span>
+      <span class="fstep-formula">Grad ${fn.degree} · Leitkoeffizient ${fn.leadPos?'positiv (+)':'negativ (−)'}</span>
+      <span class="fstep-explain">${fn.degree===2
+        ? (fn.leadPos ? 'Parabel, öffnet nach oben. Für x→±∞ gilt f(x)→+∞.' : 'Parabel, öffnet nach unten.')
+        : fn.leadPos
+          ? 'Für x→+∞: f(x)→+∞ &nbsp;|&nbsp; Für x→−∞: f(x)→−∞'
+          : 'Für x→+∞: f(x)→−∞ &nbsp;|&nbsp; Für x→−∞: f(x)→+∞'
+      }</span>
+    </div>
+  </div>
+  ${navRow(0)}`;
+}
+
+// ═══════════════════════════════════════════════
+// STEP 1 — Nullstellen
+// ═══════════════════════════════════════════════
+function renderStep1(fn) {
+  const roots = fn.nullstellen();
+  const a = fn.abcA, b = fn.abcB, c = fn.abcC;
+  const disc = b*b - 4*a*c;
+  const p = document.getElementById('panel-1');
+
+  // abc formula walkthrough (for the derivative f'=0, which is quadratic for degree 3)
+  // For degree 2: we apply it directly to f
+  let abcHtml = '';
+  if (fn.degree === 2) {
+    // Direct abc on f
+    const fA=1, fB=fn.abcB, fC=fn.abcC; // not stored separately but estimate
+    const fd = fB*fB - 4*fA*fC;
+    abcHtml = `
+    <div class="fstep blue">
+      <span class="fstep-label">abc-Formel</span>
+      <span class="fstep-formula">x = <span class="blu">( −b ± √(b²−4ac) ) / 2a</span></span>
+      <span class="fstep-explain">Koeffizienten aus f(x) = ax² + bx + c ablesen.</span>
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Einsetzen</span>
+      <span class="fstep-formula">a=${fmt(fA)}, b=${fmt(fn.abcB)}, c=${fmt(fn.abcC)}</span>
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Diskriminante</span>
+      <span class="fstep-formula">Δ = ${fmt(fn.abcB)}² − 4·${fmt(fA)}·${fmt(fn.abcC)} = <span class="acc">${fmt(fd)}</span></span>
+      <span class="fstep-explain">${fd>0?'Δ > 0 → zwei Nullstellen':fd===0?'Δ = 0 → eine Nullstelle (Berührpunkt)':'Δ < 0 → keine reellen Nullstellen'}</span>
+    </div>`;
+  } else {
+    if (fn.noConstant) {
+      abcHtml = `
+      <div class="info">
+        Da kein konstanter Term vorhanden ist, enthält jeder Summand ein x —
+        man kann <strong>x herausklammern</strong>:
+      </div>
+      <div class="fstep blue">
+        <span class="fstep-label">x herausklammern</span>
+        <span class="fstep-formula">${fn.fStr} = <span class="blu">x · (${fn.f1Str.replace(/^[0-9-]+x/, s => s.replace('x','')+'x') || '...'})</span></span>
+        <span class="fstep-explain">Daraus folgt sofort: <strong>x₁ = 0</strong> ist eine Nullstelle.</span>
+      </div>
+      <div class="fstep blue">
+        <span class="fstep-label">abc-Formel auf den Klammerausdruck</span>
+        <span class="fstep-formula">f′(x) enthält keinen konstanten Term → selbes Prinzip anwendbar</span>
+      </div>`;
+    } else {
+      abcHtml = `
+      <div class="info">
+        Bei kubischen Funktionen mit konstantem Term gibt es keine direkte Formel.
+        Man sucht zunächst eine <strong>rationale Nullstelle</strong> durch Probieren (Teiler des Absolutglieds),
+        führt dann eine <strong>Polynomdivision</strong> durch und löst das verbleibende Quadrat mit der abc-Formel.
+      </div>`;
+    }
+  }
+
+  const rootsHtml = roots.map(r => `
+    <div class="fstep green">
+      <span class="fstep-label">Nullstelle</span>
+      <span class="fstep-formula">x = <span class="grn">${fmt(r.x, 3)}</span> &nbsp;→&nbsp; N(<span class="grn">${fmt(r.x,3)}</span> | 0)</span>
+      <span class="fstep-explain">Probe: f(${fmt(r.x,3)}) = ${fmt(fn.f(r.x),3)} ≈ 0 ✓</span>
+    </div>`).join('');
+
+  p.innerHTML = `
+  <div class="card">
+    <div class="card-title"><span class="ct-badge">Schritt 2</span> Nullstellen</div>
+    <div class="info">
+      Nullstellen sind die x-Werte, bei denen die Kurve die <strong>x-Achse schneidet oder berührt</strong>.
+      Wir setzen <strong>f(x) = 0</strong> und lösen nach x auf.
+    </div>
+    <div class="fstep highlight">
+      <span class="fstep-label">Ansatz</span>
+      <span class="fstep-formula"><span class="acc">f(x) = 0</span> &nbsp;→&nbsp; <span class="acc">${fn.fStr} = 0</span></span>
+    </div>
+    ${abcHtml}
+    ${rootsHtml || '<div class="fstep"><span class="fstep-formula">Keine reellen Nullstellen im Bereich.</span></div>'}
+    <div class="results-row">
+      ${roots.map(r=>`<span class="rpill grn">N(${fmt(r.x,3)} | 0)</span>`).join('')}
+    </div>
+  </div>
+  ${navRow(1)}`;
+}
+
+// ═══════════════════════════════════════════════
+// STEP 2 — Extrempunkte
+// ═══════════════════════════════════════════════
+function renderStep2(fn) {
+  const extrema = fn.extrema();
+  const a = fn.abcA, b = fn.abcB, c = fn.abcC;
+  const disc = b*b - 4*a*c;
+  const p = document.getElementById('panel-2');
+
+  let abcHtml = '';
+  if (fn.degree >= 3) {
+    abcHtml = `
+    <div class="fstep blue">
+      <span class="fstep-label">abc-Formel auf f′(x) = 0</span>
+      <span class="fstep-formula">f′(x) = <span class="blu">${fn.f1Str}</span> = 0</span>
+      <span class="fstep-explain">f′ ist quadratisch → wir können die abc-Formel anwenden.</span>
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Koeffizienten</span>
+      <span class="fstep-formula">a = <span class="blu">${fmt(a)}</span>, &nbsp;b = <span class="blu">${fmt(b)}</span>, &nbsp;c = <span class="blu">${fmt(c)}</span></span>
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Diskriminante</span>
+      <span class="fstep-formula">Δ = b²−4ac = ${fmt(b)}²−4·${fmt(a)}·${fmt(c)} = <span class="acc">${fmt(disc)}</span></span>
+      <span class="fstep-explain">${disc>0?'Δ > 0 → zwei Extrempunkte möglich':disc===0?'Δ = 0 → ein Extrempunkt (Sattelpunkt?)':'Δ < 0 → keine reellen Extrempunkte'}</span>
+    </div>
+    ${disc >= 0 ? `
+    <div class="fstep">
+      <span class="fstep-label">x-Werte</span>
+      <span class="fstep-formula">x₁ = (${fmt(-b)} + √${fmt(disc)}) / ${fmt(2*a)} = <span class="blu">${fmt((-b+Math.sqrt(disc))/(2*a))}</span></span>
+      <span class="fstep-formula">x₂ = (${fmt(-b)} − √${fmt(disc)}) / ${fmt(2*a)} = <span class="blu">${fmt((-b-Math.sqrt(disc))/(2*a))}</span></span>
+    </div>` : ''}`;
+  } else {
+    // degree 2: f'=2x-4 → linear
+    abcHtml = `
+    <div class="fstep blue">
+      <span class="fstep-label">f′(x) = 0 lösen (lineare Gleichung)</span>
+      <span class="fstep-formula"><span class="blu">${fn.f1Str} = 0</span></span>
+    </div>`;
+  }
+
+  const extHtml = extrema.map(e => {
+    const f2val = fn.f2(e.x);
+    const isMax = e.type==='max';
+    return `
+    <div class="fstep ${isMax?'purple':'amber'}">
+      <span class="fstep-label">${isMax?'Hochpunkt':'Tiefpunkt'} — Krümmungstest</span>
+      <span class="fstep-formula">x = <span class="${isMax?'pur':'amb'}">${fmt(e.x)}</span> &nbsp;→&nbsp; f(${fmt(e.x)}) = <span class="${isMax?'pur':'amb'}">${fmt(e.y)}</span></span>
+      <span class="fstep-formula">f″(${fmt(e.x)}) = ${fmt(f2val)} &nbsp;<span class="${isMax?'pur':'amb'}">${isMax?'< 0 → Hochpunkt (linksgekrümmt)':'> 0 → Tiefpunkt (rechtsgekrümmt)'}</span></span>
+      <span class="fstep-explain">Eingesetzt in f(x): ${isMax?'H':'T'}(<span>${fmt(e.x)}</span> | <span>${fmt(e.y)}</span>)</span>
+    </div>`;
+  }).join('');
+
+  p.innerHTML = `
+  <div class="card">
+    <div class="card-title"><span class="ct-badge">Schritt 3</span> Extrempunkte</div>
+    <div class="info">
+      Extrempunkte (Hoch- und Tiefpunkte) liegen dort, wo die <strong>erste Ableitung null</strong> ist.
+      Um festzustellen ob es ein Hoch- oder Tiefpunkt ist, verwenden wir die <strong>zweite Ableitung</strong>:
+      f″ &lt; 0 → Hochpunkt &nbsp;|&nbsp; f″ &gt; 0 → Tiefpunkt.
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Erste Ableitung</span>
+      <span class="fstep-formula">f′(x) = <span class="blu">${fn.f1Str}</span></span>
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Zweite Ableitung (für Krümmungstest)</span>
+      <span class="fstep-formula">f″(x) = <span class="tel">${fn.f2Str}</span></span>
+    </div>
+    ${abcHtml}
+    ${extHtml}
+    <div class="results-row">
+      ${extrema.map(e=>`<span class="rpill ${e.type==='max'?'pur':'amb'}">${e.type==='max'?'H':'T'}(${fmt(e.x)} | ${fmt(e.y)})</span>`).join('')}
+    </div>
+  </div>
+  ${navRow(2)}`;
+}
+
+// ═══════════════════════════════════════════════
+// STEP 3 — Wendepunkt
+// ═══════════════════════════════════════════════
+function renderStep3(fn) {
+  const wp = fn.wendepunkt();
+  const p = document.getElementById('panel-3');
+
+  if (!wp) {
+    p.innerHTML = `
+    <div class="card">
+      <div class="card-title"><span class="ct-badge">Schritt 4</span> Wendepunkt</div>
+      <div class="info">
+        <strong>Kein Wendepunkt</strong> — Bei quadratischen Funktionen (Grad 2) ist f″(x) eine Konstante.
+        Die zweite Ableitung hat keine Nullstelle, daher gibt es keinen Wendepunkt.
+        Die Parabel wechselt ihr Krümmungsverhalten nie.
+      </div>
+      <div class="fstep">
+        <span class="fstep-label">Zweite Ableitung</span>
+        <span class="fstep-formula">f″(x) = <span class="tel">${fn.f2Str}</span> = const. &nbsp;→ kein Wendepunkt</span>
+      </div>
+    </div>
+    ${navRow(3)}`;
+    return;
+  }
+
+  const f2wp = fn.f2(wp.x);
+  const f3wp = fn.f3(wp.x);
+
+  p.innerHTML = `
+  <div class="card">
+    <div class="card-title"><span class="ct-badge">Schritt 4</span> Wendepunkt</div>
+    <div class="info">
+      Der <strong>Wendepunkt</strong> ist dort, wo die Funktion ihr Krümmungsverhalten ändert
+      (von links- zu rechtsgekrümmt oder umgekehrt). Wir setzen <strong>f″(x) = 0</strong> und prüfen mit f‴(x).
+    </div>
+    <div class="fstep">
+      <span class="fstep-label">Zweite Ableitung</span>
+      <span class="fstep-formula">f″(x) = <span class="tel">${fn.f2Str}</span></span>
+    </div>
+    <div class="fstep teal">
+      <span class="fstep-label">Ansatz f″(x) = 0</span>
+      <span class="fstep-formula"><span class="tel">${fn.f2Str} = 0</span> &nbsp;→&nbsp; x = <span class="tel">${fmt(wp.x)}</span></span>
+    </div>
+    <div class="fstep teal">
+      <span class="fstep-label">Bestätigung mit f‴(x)</span>
+      <span class="fstep-formula">f‴(${fmt(wp.x)}) = <span class="tel">${fmt(f3wp)}</span> &nbsp; ${Math.abs(f3wp) > 1e-8 ? '≠ 0 → Wendepunkt bestätigt ✓' : '= 0 → weiterer Test nötig'}</span>
+    </div>
+    <div class="fstep teal">
+      <span class="fstep-label">y-Wert einsetzen</span>
+      <span class="fstep-formula">f(${fmt(wp.x)}) = <span class="tel">${fmt(wp.y)}</span></span>
+      <span class="fstep-explain">Wendepunkt: W(<span class="tel">${fmt(wp.x)} | ${fmt(wp.y)}</span>)</span>
+    </div>
+    <div class="results-row">
+      <span class="rpill tel">W(${fmt(wp.x)} | ${fmt(wp.y)})</span>
+    </div>
+  </div>
+  ${navRow(3)}`;
+}
+
+// ═══════════════════════════════════════════════
+// STEP 4 — Wendetangente
+// ═══════════════════════════════════════════════
+function renderStep4(fn) {
+  const wp = fn.wendepunkt();
+  const p = document.getElementById('panel-4');
+
+  if (!wp) {
+    p.innerHTML = `
+    <div class="card">
+      <div class="card-title"><span class="ct-badge">Schritt 5</span> Wendetangente</div>
+      <div class="info">
+        Kein Wendepunkt vorhanden — daher gibt es auch keine Wendetangente.
+      </div>
+    </div>
+    ${navRow(4)}`;
+    return;
+  }
+
+  const k = fn.f1(wp.x);
+  const d = wp.y - k * wp.x;
+
+  p.innerHTML = `
+  <div class="card">
+    <div class="card-title"><span class="ct-badge">Schritt 5</span> Wendetangente</div>
+    <div class="info">
+      Die <strong>Wendetangente</strong> ist die Tangente an der Kurve im Wendepunkt.
+      Ihre Gleichung lautet <strong>t(x) = kx + d</strong>, wobei k die Steigung und d der y-Achsenabschnitt ist.
+    </div>
+    <div class="fstep teal">
+      <span class="fstep-label">Wendepunkt (bekannt)</span>
+      <span class="fstep-formula">W(<span class="tel">${fmt(wp.x)} | ${fmt(wp.y)}</span>)</span>
+    </div>
+    <div class="fstep purple">
+      <span class="fstep-label">Steigung k = f′(xw)</span>
+      <span class="fstep-formula">k = f′(${fmt(wp.x)}) = ${fn.f1Str.replace('x', fmt(wp.x))}</span>
+      <span class="fstep-formula">k = <span class="pur">${fmt(k)}</span></span>
+    </div>
+    <div class="fstep purple">
+      <span class="fstep-label">y-Achsenabschnitt d berechnen</span>
+      <span class="fstep-formula">d = yw − k · xw</span>
+      <span class="fstep-formula">d = ${fmt(wp.y)} − ${fmt(k)} · ${fmt(wp.x)} = <span class="pur">${fmt(d)}</span></span>
+    </div>
+    <div class="fstep purple">
+      <span class="fstep-label">Wendetangente</span>
+      <span class="fstep-formula">t(x) = <span class="pur">${fmt(k)}x ${fmtSign(d)}</span></span>
+      <span class="fstep-explain">Probe: t(${fmt(wp.x)}) = ${fmt(k)}·${fmt(wp.x)} ${fmtSign(d)} = ${fmt(k*wp.x+d)} ≈ ${fmt(wp.y)} ✓</span>
+    </div>
+    <div class="results-row">
+      <span class="rpill pur">t(x) = ${fmt(k)}x ${fmtSign(d)}</span>
+    </div>
+  </div>
+  ${navRow(4)}`;
+}
+
+// ═══════════════════════════════════════════════
+// STEP 5 — Zeichnung
+// ═══════════════════════════════════════════════
+function renderStep5(fn) {
+  const roots   = fn.nullstellen();
+  const extrema = fn.extrema();
+  const wp      = fn.wendepunkt();
+  const k       = wp ? fn.f1(wp.x) : null;
+  const d       = wp ? wp.y - k*wp.x : null;
+  const p = document.getElementById('panel-5');
+
+  const sumRows = [
+    ...roots.map(r => `<tr><td><span class="dot" style="background:var(--green)"></span>Nullstelle</td><td style="font-family:'DM Mono',monospace">N(${fmt(r.x,3)} | 0)</td><td style="color:var(--muted);font-size:12px">f(x) = 0</td></tr>`),
+    ...extrema.map(e => `<tr><td><span class="dot" style="background:${e.type==='max'?'var(--purple)':'var(--amber)'}"></span>${e.type==='max'?'Hochpunkt':'Tiefpunkt'}</td><td style="font-family:'DM Mono',monospace">${e.type==='max'?'H':'T'}(${fmt(e.x)} | ${fmt(e.y)})</td><td style="color:var(--muted);font-size:12px">f″ ${e.type==='max'?'< 0':'> 0'}</td></tr>`),
+    wp ? `<tr><td><span class="dot" style="background:var(--teal)"></span>Wendepunkt</td><td style="font-family:'DM Mono',monospace">W(${fmt(wp.x)} | ${fmt(wp.y)})</td><td style="color:var(--muted);font-size:12px">f″ = 0, f‴ ≠ 0</td></tr>` : '',
+    wp ? `<tr><td><span class="dot" style="background:var(--purple)"></span>Wendetangente</td><td style="font-family:'DM Mono',monospace">t(x) = ${fmt(k)}x ${fmtSign(d)}</td><td style="color:var(--muted);font-size:12px">k = f′(xw)</td></tr>` : '',
+  ].join('');
+
+  p.innerHTML = `
+  <div class="card">
+    <div class="card-title"><span class="ct-badge">Schritt 6</span> Zeichnung</div>
+    <table class="sum-table"><thead><tr><th>Punkt / Kurve</th><th>Koordinaten</th><th>Herkunft</th></tr></thead><tbody>${sumRows}</tbody></table>
+  </div>
+  <div class="card" style="padding:1rem">
+    <canvas id="main-cv"></canvas>
+    <div class="legend">
+      <div class="li"><div class="lsw" style="background:var(--accent)"></div> f(x)</div>
+      ${wp?`<div class="li"><div class="lsw" style="background:var(--purple);height:1.5px;border-top:2px dashed var(--purple)"></div> Wendetangente</div>`:''}
+      <div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--green)"></div> Nullstellen</div>
+      ${extrema.some(e=>e.type==='max')?`<div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--purple)"></div> Hochpunkt</div>`:''}
+      ${extrema.some(e=>e.type==='min')?`<div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--amber)"></div> Tiefpunkt</div>`:''}
+      ${wp?`<div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--teal)"></div> Wendepunkt</div>`:''}
+    </div>
+  </div>
+  ${navRow(5)}`;
+}
+
+function navRow(step) {
+  const prev = step > 0 ? `<button class="nav-btn" onclick="goStep(${step-1})">← Zurück</button>` : `<span></span>`;
+  const next = step < 5 ? `<button class="nav-btn primary" onclick="goStep(${step+1})">Weiter →</button>` : `<span></span>`;
+  return `<div class="nav-row">${prev}${next}</div>`;
+}
+
+// ═══════════════════════════════════════════════
+// CANVAS DRAWING
+// ═══════════════════════════════════════════════
+let cvCtx, cvW, cvH;
+
+function initCanvas() {
+  const r = setupCanvas('main-cv', 0.56);
+  if (!r) return false;
+  cvCtx = r.ctx; cvW = r.w; cvH = r.h;
+  return true;
+}
+
+function drawCanvas() {
+  if (!cvCtx) return;
+  const fn = FUNCS[currentFunc];
+  const W = cvW, H = cvH;
+  const xR = fn.xRange, yR = fn.yRange;
+  const d = isDark();
+
+  const C = {
+    bg:      d ? '#161412' : '#faf9f5',
+    grid:    d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+    axis:    d ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.25)',
+    axtext:  d ? 'rgba(255,255,255,0.4)'  : 'rgba(0,0,0,0.4)',
+    curve:   d ? '#e06040' : '#b84020',
+    tangent: d ? '#b07ae0' : '#6b3a9e',
+    green:   d ? '#4ec27a' : '#1e6e3a',
+    purple:  d ? '#b07ae0' : '#6b3a9e',
+    amber:   d ? '#f0b040' : '#8a5a00',
+    teal:    d ? '#3ecece' : '#0e6e6e',
+  };
+
+  function sc(x,y){ return [(x-xR[0])/(xR[1]-xR[0])*W, H-(y-yR[0])/(yR[1]-yR[0])*H]; }
+
+  cvCtx.clearRect(0,0,W,H);
+  cvCtx.fillStyle = C.bg;
+  cvCtx.fillRect(0,0,W,H);
+
+  // Grid
+  cvCtx.strokeStyle=C.grid; cvCtx.lineWidth=0.5;
+  for (let gx=Math.ceil(xR[0]);gx<=Math.floor(xR[1]);gx++){
+    const [sx]=sc(gx,0); cvCtx.beginPath();cvCtx.moveTo(sx,0);cvCtx.lineTo(sx,H);cvCtx.stroke();
+  }
+  for (let gy=Math.ceil(yR[0]);gy<=Math.floor(yR[1]);gy++){
+    const [,sy]=sc(0,gy); cvCtx.beginPath();cvCtx.moveTo(0,sy);cvCtx.lineTo(W,sy);cvCtx.stroke();
+  }
+
+  // Axes
+  const [,ay]=sc(0,0); const [ax]=sc(0,0);
+  cvCtx.strokeStyle=C.axis; cvCtx.lineWidth=1;
+  cvCtx.beginPath();cvCtx.moveTo(0,ay);cvCtx.lineTo(W,ay);cvCtx.stroke();
+  cvCtx.beginPath();cvCtx.moveTo(ax,0);cvCtx.lineTo(ax,H);cvCtx.stroke();
+
+  // Axis labels
+  cvCtx.fillStyle=C.axtext; cvCtx.font="11px 'DM Mono',monospace";
+  cvCtx.textAlign='center';
+  for (let gx=Math.ceil(xR[0]);gx<=Math.floor(xR[1]);gx++){
+    if(gx===0)continue; const [sx]=sc(gx,0); cvCtx.fillText(gx,sx,ay+13);
+  }
+  cvCtx.textAlign='right';
+  for (let gy=Math.ceil(yR[0]);gy<=Math.floor(yR[1]);gy++){
+    if(gy===0)continue; const [,sy]=sc(0,gy); cvCtx.fillText(gy,ax-5,sy+4);
+  }
+
+  // Wendetangente
+  const wp = fn.wendepunkt();
+  if (wp) {
+    const k = fn.f1(wp.x), db = wp.y - k*wp.x;
+    const tl = (xR[1]-xR[0])*0.35;
+    const [tx1,ty1]=sc(wp.x-tl, k*(wp.x-tl)+db);
+    const [tx2,ty2]=sc(wp.x+tl, k*(wp.x+tl)+db);
+    cvCtx.strokeStyle=C.tangent; cvCtx.lineWidth=1.5;
+    cvCtx.setLineDash([6,4]);
+    cvCtx.beginPath();cvCtx.moveTo(tx1,ty1);cvCtx.lineTo(tx2,ty2);cvCtx.stroke();
+    cvCtx.setLineDash([]);
+  }
+
+  // f(x) curve
+  cvCtx.strokeStyle=C.curve; cvCtx.lineWidth=2.8; cvCtx.lineJoin='round';
+  cvCtx.beginPath();
+  let started=false;
+  for (let px=0;px<=W;px++){
+    const x=xR[0]+(px/W)*(xR[1]-xR[0]);
+    const y=fn.f(x);
+    if(!isFinite(y)||y<yR[0]-2||y>yR[1]+2){started=false;continue;}
+    const [sx,sy]=sc(x,y);
+    if(!started){cvCtx.moveTo(sx,sy);started=true;}else cvCtx.lineTo(sx,sy);
+  }
+  cvCtx.stroke();
+
+  function dot(x, y, color, r=5.5) {
+    const [px,py]=sc(x,y);
+    cvCtx.fillStyle=color; cvCtx.beginPath();cvCtx.arc(px,py,r,0,2*Math.PI);cvCtx.fill();
+    cvCtx.strokeStyle=C.bg; cvCtx.lineWidth=2; cvCtx.beginPath();cvCtx.arc(px,py,r,0,2*Math.PI);cvCtx.stroke();
+  }
+
+  function label(x, y, text, color, offX=9, offY=-9) {
+    const [px,py]=sc(x,y);
+    cvCtx.fillStyle=color;
+    cvCtx.font="500 12px 'DM Sans',sans-serif";
+    cvCtx.textAlign = offX >= 0 ? 'left' : 'right';
+    cvCtx.fillText(text, px+offX, py+offY);
+  }
+
+  // Collect all special points and draw with overlap-aware labels
+  const roots = fn.nullstellen();
+  const allPoints = [];
+  roots.forEach(r   => allPoints.push({x:r.x, y:0,     text:`N(${fmt(r.x,2)}|0)`,                                           color:C.green}));
+  fn.extrema().forEach(e => allPoints.push({x:e.x, y:e.y, text:`${e.type==='max'?'H':'T'}(${fmt(e.x,2)}|${fmt(e.y,2)})`,   color:e.type==='max'?C.purple:C.amber}));
+  if (wp) allPoints.push({x:wp.x, y:wp.y, text:`W(${fmt(wp.x,2)}|${fmt(wp.y,2)})`,                                          color:C.teal});
+
+  // Draw all dots first
+  allPoints.forEach(p => dot(p.x, p.y, p.color));
+
+  // Place labels with collision avoidance
+  const placed = [];
+  const LW = 108, LH = 15;
+  const offsets = [
+    [9,-14],[9,20],[-9,-14],[-9,20],
+    [9,-28],[9,34],[-9,-28],[-9,34],
+    [18,-14],[18,20],[-18,-14],[-18,20]
+  ];
+  allPoints.forEach(p => {
+    const [px,py] = sc(p.x, p.y);
+    let ox = 9, oy = -14;
+    for (const [cx,cy] of offsets) {
+      const lx=px+cx, ly=py+cy;
+      const clash = placed.some(q => Math.abs(lx-q.lx)<LW && Math.abs(ly-q.ly)<LH);
+      if (!clash) { ox=cx; oy=cy; break; }
+    }
+    placed.push({lx:px+ox, ly:py+oy});
+    cvCtx.fillStyle = p.color;
+    cvCtx.font = "500 11px 'DM Sans',sans-serif";
+    cvCtx.textAlign = ox >= 0 ? 'left' : 'right';
+    cvCtx.fillText(p.text, px+ox, py+oy);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  onFuncChange();
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  renderAll();
+  if (currentStep===5) setTimeout(()=>{initCanvas();drawCanvas();},30);
+});
+window.addEventListener('resize', () => {
+  if (currentStep===5) { initCanvas(); drawCanvas(); }
+});
+</script>
+</body>
+</html>
