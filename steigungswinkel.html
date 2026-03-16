@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Steigungswinkel – Interaktive Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .page { max-width: 780px; }
+
+  header h1 {
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+
+  /* Curve colour override for this page (purple instead of red) */
+  :root {
+    --curve:        #6d3fc7;
+    --curve-tangent:#0a7c4f;
+    --curve-point:  #b45309;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --curve:        #a78bfa;
+      --curve-tangent:#34d399;
+      --curve-point:  #f59e0b;
+    }
+  }
+
+  input[type="range"] { accent-color: var(--curve); }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 520px) { .results-grid { grid-template-columns: 1fr; } }
+
+  .result-item {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .result-item .rlabel { font-size: 12px; color: var(--hint); margin-bottom: 6px; }
+  .result-item .rvalue { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .result-item .rdesc  { font-size: 12px; color: var(--muted); }
+
+  /* Pill colour overrides: re-map to this page's colour set */
+  .pill.blue   { background: rgba(29,95,187,0.12); border-color: transparent; color: #1d5fbb; }
+  .pill.green  { background: rgba(10,124,79,0.12);  border-color: transparent; color: #0a7c4f; }
+  .pill.amber  { background: rgba(180,83,9,0.12);   border-color: transparent; color: #92400e; }
+  .pill.purple { background: rgba(109,63,199,0.12); border-color: transparent; color: #5b21b6; }
+  @media (prefers-color-scheme: dark) {
+    .pill.blue   { background: rgba(96,165,250,0.18);  color: #60a5fa; }
+    .pill.green  { background: rgba(52,211,153,0.15);  color: #34d399; }
+    .pill.amber  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .pill.purple { background: rgba(167,139,250,0.15); color: #a78bfa; }
+  }
+
+  .formula-section { margin-top: 12px; }
+
+  .formula-box {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .formula-box .ftitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--hint);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .formula-box .frow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .formula-box .frow:last-child { margin-bottom: 0; }
+  .feq { font-size: 15px; color: var(--muted); }
+
+  .explain-card {
+    border-left-color: var(--curve);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .legend-dot.circle {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Steigungswinkel</h1>
+    <p>Interaktive Demo: Wie hängen Steigung, erste Ableitung und Steigungswinkel zusammen?</p>
+  </header>
+
+  <!-- Controls + Results -->
+  <div class="controls-grid">
+    <div class="card">
+      <div class="card-label">Funktion &amp; Punkt</div>
+      <select id="func-sel" onchange="update()">
+        <option value="quad">f(x) = x²</option>
+        <option value="cubic">f(x) = x³ − 3x</option>
+        <option value="sin">f(x) = sin(x)</option>
+        <option value="lin">f(x) = 2x + 1</option>
+      </select>
+      <div class="slider-row">
+        <label>Punkt x₀</label>
+        <input type="range" id="x0-slider" min="-3" max="3" step="0.1" value="1" oninput="update()">
+        <span id="x0-out" class="pill">1.0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Ergebnisse</div>
+      <div class="results-grid">
+        <div class="result-item">
+          <div class="rlabel">f(x₀)</div>
+          <div class="rvalue"><span id="fx-out" class="pill">—</span></div>
+        </div>
+        <div class="result-item">
+          <div class="rlabel">Steigung m = f′(x₀)</div>
+          <div class="rvalue"><span id="dfx-out" class="pill green">—</span></div>
+        </div>
+        <div class="result-item">
+          <div class="rlabel">Steigungswinkel α</div>
+          <div class="rvalue"><span id="angle-out" class="pill blue">—</span></div>
+        </div>
+        <div class="result-item">
+          <div class="rlabel">tan(α) = m</div>
+          <div class="rvalue"><span id="tan-out" class="pill amber">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <div class="card" style="padding: 1rem;">
+    <canvas id="cv"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--curve);height:3px;"></div> f(x)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--curve-tangent);height:2px;border-top:2px dashed var(--curve-tangent);"></div> Tangente</div>
+      <div class="legend-item"><div class="legend-dot circle" style="background:var(--curve-point);"></div> Punkt (x₀, f(x₀))</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--angle-stroke);width:14px;height:10px;border-radius:3px;opacity:0.5;"></div> Steigungswinkel α</div>
+    </div>
+  </div>
+
+  <!-- Formulas -->
+  <div class="card formula-section">
+    <div class="card-label">Die zwei zentralen Zusammenhänge</div>
+    <div class="formula-box">
+      <div class="ftitle">1 · Erste Ableitung = Steigung</div>
+      <div class="frow">
+        <span class="feq">m</span>
+        <span class="feq">=</span>
+        <span class="pill purple">f′(x₀)</span>
+        <span class="feq">=</span>
+        <span id="f1-label" class="pill">—</span>
+        <span class="feq">=</span>
+        <span id="dfx-out2" class="pill green">—</span>
+      </div>
+    </div>
+    <div class="formula-box">
+      <div class="ftitle">2 · Steigungswinkel über Tangens</div>
+      <div class="frow">
+        <span class="pill blue">α</span>
+        <span class="feq">=</span>
+        <span class="feq">arctan(m)</span>
+        <span class="feq">=</span>
+        <span id="angle-out2" class="pill blue">—</span>
+      </div>
+      <div class="frow" style="margin-top:6px">
+        <span class="feq">tan(</span><span class="pill blue" style="padding:2px 8px;">α</span><span class="feq">)</span>
+        <span class="feq">=</span>
+        <span id="tan-out2" class="pill amber">—</span>
+        <span class="feq">=</span>
+        <span class="feq">m</span>
+        <span style="font-size:13px;color:var(--curve-tangent);font-weight:500;">✓</span>
+      </div>
+    </div>
+    <div class="explain-card" id="explain"></div>
+  </div>
+
+  <footer>Erstellt mit Claude · <a href="index.html" style="color:var(--hint);">← Alle Demos</a></footer>
+</div>
+
+<script src="canvas-utils.js"></script>
+<script>
+const CV  = document.getElementById('cv');
+const ctx = CV.getContext('2d');
+
+function resizeCanvas() {
+  const r = setupCanvas(CV, 0.48);
+  if (r) { /* setupCanvas already scaled ctx */ }
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); draw(currentState()); });
+
+const funcs = {
+  quad:  { f: x => x*x,         df: x => 2*x,         label: 'f(x) = x²',       dfExpr: x => `2 · ${x.toFixed(1)}`,   dfLabel: 'f′(x) = 2x',    xRange: [-3,3],    yRange: [-0.5,9]  },
+  cubic: { f: x => x*x*x-3*x,   df: x => 3*x*x-3,     label: 'f(x) = x³ − 3x',  dfExpr: x => `3·${x.toFixed(1)}²−3`, dfLabel: 'f′(x) = 3x²−3', xRange: [-3,3],    yRange: [-5,5]    },
+  sin:   { f: x => Math.sin(x),  df: x => Math.cos(x), label: 'f(x) = sin(x)',    dfExpr: x => `cos(${x.toFixed(1)})`, dfLabel: 'f′(x) = cos(x)', xRange: [-3.5,3.5],yRange: [-2,2]    },
+  lin:   { f: x => 2*x+1,        df: x => 2,           label: 'f(x) = 2x + 1',   dfExpr: x => '2',                    dfLabel: 'f′(x) = 2',      xRange: [-2,4],    yRange: [-3,9]    }
+};
+
+function currentState() {
+  return {
+    sel: document.getElementById('func-sel').value,
+    x0:  parseFloat(document.getElementById('x0-slider').value)
+  };
+}
+
+function update() {
+  const { sel, x0 } = currentState();
+  document.getElementById('x0-out').textContent = x0.toFixed(1);
+
+  const fn       = funcs[sel];
+  const fx       = fn.f(x0);
+  const slope    = fn.df(x0);
+  const angleDeg = Math.atan(slope) * 180 / Math.PI;
+  const tanAlpha = Math.tan(angleDeg * Math.PI / 180);
+
+  document.getElementById('fx-out').textContent    = fx.toFixed(2);
+  document.getElementById('dfx-out').textContent   = slope.toFixed(2);
+  document.getElementById('dfx-out2').textContent  = slope.toFixed(2);
+  document.getElementById('angle-out').textContent = angleDeg.toFixed(1) + '°';
+  document.getElementById('angle-out2').textContent= angleDeg.toFixed(1) + '°';
+  document.getElementById('tan-out').textContent   = tanAlpha.toFixed(2);
+  document.getElementById('tan-out2').textContent  = tanAlpha.toFixed(2);
+  document.getElementById('f1-label').textContent  = fn.dfExpr(x0);
+
+  const slopeDesc = slope > 0.05 ? 'steigt an' : slope < -0.05 ? 'fällt ab' : 'ist waagerecht – hier liegt ein Extrempunkt vor';
+  document.getElementById('explain').innerHTML =
+    `An der Stelle <strong>x₀ = ${x0.toFixed(1)}</strong> gilt: Die erste Ableitung beträgt <strong>f′(x₀) = ${slope.toFixed(2)}</strong> – das ist die <strong>Steigung m</strong> der Tangente. Die Kurve ${slopeDesc}.<br>
+     Der Steigungswinkel ist <strong>α = arctan(${slope.toFixed(2)}) = ${angleDeg.toFixed(1)}°</strong>. Umgekehrt: <strong>tan(${angleDeg.toFixed(1)}°) ≈ ${tanAlpha.toFixed(2)}</strong> – das ist genau die Steigung m.`;
+
+  draw({ sel, x0, fn, fx, slope, angleDeg });
+}
+
+function draw({ x0, fn, fx, slope, angleDeg }) {
+  const W = CV.offsetWidth;
+  const H = CV.offsetHeight || Math.round(W * 0.48);
+
+  // Use page-specific colours for this purple-themed page
+  const d = isDark();
+  const C = {
+    bg:      d ? '#1a1917' : '#fafaf7',
+    grid:    d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    axis:    d ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.22)',
+    text:    d ? 'rgba(255,255,255,0.5)'  : 'rgba(0,0,0,0.5)',
+    curve:   d ? '#a78bfa' : '#6d3fc7',
+    tangent: d ? '#34d399' : '#0a7c4f',
+    point:   d ? '#f59e0b' : '#b45309',
+    aFill:   d ? 'rgba(96,165,250,0.20)'  : 'rgba(59,130,246,0.16)',
+    aStroke: d ? '#60a5fa' : '#1d5fbb',
+  };
+
+  const xRange = fn.xRange;
+  const yRange = fn.yRange;
+  const sc = makeCoords(xRange, yRange, W, H);
+  drawGrid(ctx, W, H, xRange, yRange, C, sc);
+
+  // Curve
+  drawCurve(ctx, W, xRange, yRange, fn.f, C.curve, 2.5, sc);
+
+  // Tangent
+  const tLen = (xRange[1] - xRange[0]) * 0.32;
+  const [tx1, ty1] = sc(x0 - tLen, fx - slope * tLen);
+  const [tx2, ty2] = sc(x0 + tLen, fx + slope * tLen);
+  drawTangent(ctx, 0, 0, tx1, ty1, tx2, ty2, C.tangent);
+
+  // Angle arc
+  const [px0, py0] = sc(x0, fx);
+  if (Math.abs(angleDeg) > 2 && Math.abs(angleDeg) < 88) {
+    drawAngleArc(ctx, px0, py0, tx1, ty1, tx2, ty2, C, W);
+  }
+
+  // Δx/Δy triangle
+  if (Math.abs(slope) > 0.1 && Math.abs(angleDeg) < 87) {
+    const dx = tLen * 0.5;
+    const [bx0, by0] = sc(x0, fx);
+    const [bx1, by1] = sc(x0 + dx, fx);
+    const [bx2, by2] = sc(x0 + dx, fx + slope * dx);
+    ctx.strokeStyle = C.tangent; ctx.lineWidth = 0.8;
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(bx0, by0); ctx.lineTo(bx1, by1); ctx.lineTo(bx2, by2); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.font = "11px 'DM Mono', monospace"; ctx.fillStyle = C.tangent;
+    ctx.textAlign = 'center'; ctx.fillText('Δx', (bx0 + bx1) / 2, by0 + 14);
+    ctx.textAlign = slope > 0 ? 'left' : 'right';
+    ctx.fillText('Δy', bx2 + (slope > 0 ? 5 : -5), (by1 + by2) / 2 + 4);
+  }
+
+  // Point
+  drawPoint(ctx, px0, py0, C.point, C.bg, 6);
+
+  // Point label
+  ctx.fillStyle = C.point;
+  ctx.font = "500 12px 'DM Sans', sans-serif"; ctx.textAlign = 'left';
+  ctx.fillText(`(${x0.toFixed(1)}, ${fx.toFixed(1)})`, px0 + 10, py0 - 8);
+}
+
+update();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', update);
+</script>
+</body>
+</html>
