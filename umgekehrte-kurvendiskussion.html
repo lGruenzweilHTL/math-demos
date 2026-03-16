@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Umgekehrte Kurvendiskussion</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── Page-specific overrides ── */
+:root {
+  --surface2: #eceae2;
+  --surface3: #e4e1d8;
+  --border:   rgba(0,0,0,0.09);
+  --border2:  rgba(0,0,0,0.17);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface2: #221f18;
+    --surface3: #2a2720;
+    --border:   rgba(255,255,255,0.08);
+    --border2:  rgba(255,255,255,0.16);
+  }
+}
+
+/* Header */
+header h1 { font-family: 'Lora', serif; font-size: 30px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 5px; }
+header h1 em { font-style: italic; color: var(--red); }
+
+/* Example tabs */
+.ex-tabs { display: flex; gap: 0; margin-bottom: 18px; border: 0.5px solid var(--border2); border-radius: 12px; overflow: hidden; background: var(--surface2); }
+.ex-tab { flex: 1; padding: 11px 8px; border: none; background: transparent; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); border-right: 0.5px solid var(--border); transition: background .15s, color .15s; line-height: 1.3; text-align: center; }
+.ex-tab:last-child { border-right: none; }
+.ex-tab:hover { background: var(--surface3); color: var(--text); }
+.ex-tab.active { background: var(--surface); color: var(--text); }
+.ex-tab .sub { display: block; font-size: 11px; font-weight: 400; color: var(--hint); margin-top: 2px; }
+.ex-tab.active .sub { color: var(--muted); }
+
+/* Card title & badge */
+.card-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.badge { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; background: var(--surface2); color: var(--hint); border-radius: 5px; padding: 2px 7px; }
+
+/* Given conditions box */
+.given-box { background: var(--surface2); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.given-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--hint); margin-bottom: 10px; }
+.given-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 7px; }
+.given-row:last-child { margin-bottom: 0; }
+.given-tag { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 5px; min-width: 32px; text-align: center; }
+.given-tag.pt  { background: rgba(30,110,58,0.12);  color: var(--green); }
+.given-tag.ext { background: rgba(107,58,158,0.12); color: var(--purple); }
+.given-tag.wp  { background: rgba(14,110,110,0.12); color: var(--teal); }
+.given-tag.sy  { background: rgba(26,86,150,0.12);  color: var(--blue); }
+@media (prefers-color-scheme: dark) {
+  .given-tag.pt  { background: rgba(78,194,122,0.15);  color: var(--green); }
+  .given-tag.ext { background: rgba(176,122,224,0.15); color: var(--purple); }
+  .given-tag.wp  { background: rgba(62,206,206,0.15);  color: var(--teal); }
+  .given-tag.sy  { background: rgba(91,163,232,0.15);  color: var(--blue); }
+}
+.given-text { font-size: 14px; color: var(--text); line-height: 1.5; }
+.given-text .mono { font-family: 'DM Mono', monospace; }
+.given-explain { font-size: 12px; color: var(--hint); margin-left: 2px; }
+
+/* Step */
+.step { margin-bottom: 10px; }
+.step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; cursor: pointer; user-select: none; }
+.step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); color: var(--hint); font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-num.done   { background: var(--green); color: #fff; }
+.step-num.active { background: var(--red);   color: #fff; }
+.step-title { font-size: 14px; font-weight: 500; color: var(--text); }
+.step-body { padding-left: 30px; }
+
+/* Formula row */
+.frow { background: var(--surface2); border-radius: 8px; padding: 9px 13px; margin-bottom: 6px; border-left: 3px solid var(--border2); }
+.frow.r { border-left-color: var(--red); }
+.frow.b { border-left-color: var(--blue); }
+.frow.g { border-left-color: var(--green); }
+.frow.p { border-left-color: var(--purple); }
+.frow.t { border-left-color: var(--teal); }
+.frow.a { border-left-color: var(--amber); }
+.frow-label { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--hint); margin-bottom: 4px; }
+.frow-f { font-family: 'DM Mono', monospace; font-size: 13.5px; color: var(--text); line-height: 1.7; }
+.frow-f .r { color: var(--red); }
+.frow-f .b { color: var(--blue); }
+.frow-f .g { color: var(--green); }
+.frow-f .p { color: var(--purple); }
+.frow-f .t { color: var(--teal); }
+.frow-f .a { color: var(--amber); }
+.frow-note { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+/* System box */
+.sys-box { border: 0.5px solid var(--border2); border-radius: 10px; padding: 13px 16px; margin-bottom: 8px; }
+.sys-box .sys-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--hint); font-weight: 500; margin-bottom: 8px; }
+.eq-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+.eq-row:last-child { margin-bottom: 0; }
+.eq-num { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--hint); min-width: 20px; }
+.eq-f { font-family: 'DM Mono', monospace; font-size: 13.5px; color: var(--text); }
+
+/* Result banner */
+.result-banner { background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; padding: 13px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.result-banner .res-label { font-size: 12px; color: var(--muted); }
+.result-banner .res-f { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; color: var(--red); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Umgekehrte <em>Kurvendiskussion</em></h1>
+  <p>Von gegebenen Punkten und Bedingungen zur Funktionsgleichung — mithilfe von Gleichungssystemen.</p>
+</header>
+
+<div class="ex-tabs">
+  <button class="ex-tab active" onclick="showEx(0)">
+    Quadratisch
+    <span class="sub">3 Punkte → f(x) = ax²+bx+c</span>
+  </button>
+  <button class="ex-tab" onclick="showEx(1)">
+    Kubisch einfach
+    <span class="sub">Extrempunkt + 2 Punkte</span>
+  </button>
+  <button class="ex-tab" onclick="showEx(2)">
+    Kubisch mit Symmetrie
+    <span class="sub">Wendepunkt auf y-Achse</span>
+  </button>
+</div>
+
+<!-- ═══ PANEL 0: Quadratic ═══ -->
+<div id="ex-0" class="panel active">
+
+  <div class="card">
+    <div class="card-title"><span class="badge">Beispiel 1</span> Drei Punkte bestimmen eine Parabel</div>
+    <div class="info">
+      Eine quadratische Funktion <strong>f(x) = ax² + bx + c</strong> hat genau <strong>3 Unbekannte</strong>: a, b, c.
+      Um sie zu bestimmen, brauchen wir genau <strong>3 Bedingungen</strong> — zum Beispiel 3 Punkte auf der Kurve.
+      Jeden Punkt setzen wir in die Funktionsgleichung ein → wir erhalten eine Gleichung. 3 Punkte = 3 Gleichungen = lösbares System.
+    </div>
+    <div class="given-box">
+      <div class="given-title">Gegeben</div>
+      <div class="given-row">
+        <span class="given-tag pt">P₁</span>
+        <span class="given-text"><span class="mono">P₁(0 | 1)</span></span>
+        <span class="given-explain">Punkt auf der Kurve</span>
+      </div>
+      <div class="given-row">
+        <span class="given-tag pt">P₂</span>
+        <span class="given-text"><span class="mono">P₂(1 | 0)</span></span>
+        <span class="given-explain">Punkt auf der Kurve</span>
+      </div>
+      <div class="given-row">
+        <span class="given-tag pt">P₃</span>
+        <span class="given-text"><span class="mono">P₃(3 | 4)</span></span>
+        <span class="given-explain">Punkt auf der Kurve</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schritt 1 — Gleichungen aufstellen</div>
+    <div class="info">
+      Jeder Punkt bedeutet: <strong>f(x) = y</strong>. Wir setzen x und y ein und erhalten eine Gleichung mit a, b, c.
+    </div>
+    <div class="frow r">
+      <div class="frow-label">Ansatz</div>
+      <div class="frow-f"><span class="r">f(x) = ax² + bx + c</span></div>
+    </div>
+    <div class="frow g">
+      <div class="frow-label">P₁(0 | 1) einsetzen: f(0) = 1</div>
+      <div class="frow-f">a·<span class="g">0²</span> + b·<span class="g">0</span> + c = 1 &nbsp;→&nbsp; <span class="g">c = 1</span></div>
+      <div class="frow-note">c ist sofort bekannt! Punkte auf der y-Achse geben c direkt.</div>
+    </div>
+    <div class="frow b">
+      <div class="frow-label">P₂(1 | 0) einsetzen: f(1) = 0</div>
+      <div class="frow-f">a·1 + b·1 + <span class="g">1</span> = 0 &nbsp;→&nbsp; <span class="b">a + b = −1</span> &nbsp;&nbsp;<span style="color:var(--hint);font-size:12px">(I)</span></div>
+    </div>
+    <div class="frow p">
+      <div class="frow-label">P₃(3 | 4) einsetzen: f(3) = 4</div>
+      <div class="frow-f">a·9 + b·3 + <span class="g">1</span> = 4 &nbsp;→&nbsp; <span class="p">9a + 3b = 3</span> &nbsp;÷3:&nbsp; <span class="p">3a + b = 1</span> &nbsp;&nbsp;<span style="color:var(--hint);font-size:12px">(II)</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schritt 2 — Gleichungssystem lösen</div>
+    <div class="sys-box">
+      <div class="sys-label">System (c bereits bekannt)</div>
+      <div class="eq-row"><span class="eq-num">(I)</span><span class="eq-f"> a + b = −1</span></div>
+      <div class="eq-row"><span class="eq-num">(II)</span><span class="eq-f">3a + b =  1</span></div>
+    </div>
+    <div class="frow b">
+      <div class="frow-label">(II) − (I): 2a = 2</div>
+      <div class="frow-f"><span class="b">a = 1</span></div>
+    </div>
+    <div class="frow p">
+      <div class="frow-label">a in (I) einsetzen: 1 + b = −1</div>
+      <div class="frow-f"><span class="p">b = −2</span></div>
+    </div>
+    <div class="result-banner">
+      <span class="res-label">Ergebnis:</span>
+      <span class="res-f">f(x) = x² − 2x + 1</span>
+      <span style="font-size:13px;color:var(--muted)">= (x−1)²</span>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem">
+    <canvas id="cv-0"></canvas>
+    <div class="legend">
+      <div class="li"><div class="lsw" style="background:var(--red)"></div> f(x) = x² − 2x + 1</div>
+      <div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--green)"></div> Gegebene Punkte</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PANEL 1: Cubic simple ═══ -->
+<div id="ex-1" class="panel">
+
+  <div class="card">
+    <div class="card-title"><span class="badge">Beispiel 2</span> Kubische mit Extrempunkt und Punkten</div>
+    <div class="info">
+      Eine kubische Funktion <strong>f(x) = ax³ + bx² + cx + d</strong> hat <strong>4 Unbekannte</strong>.
+      Ein <strong>Extrempunkt</strong> liefert uns gleich <strong>2 Gleichungen</strong>: f(xₑ) = yₑ und f′(xₑ) = 0.
+      Mit 2 weiteren Punkten haben wir genug, um das System zu lösen.
+    </div>
+    <div class="given-box">
+      <div class="given-title">Gegeben</div>
+      <div class="given-row">
+        <span class="given-tag ext">HP</span>
+        <span class="given-text"><span class="mono">H(0 | 2)</span></span>
+        <span class="given-explain">Hochpunkt → f(0)=2 und f′(0)=0</span>
+      </div>
+      <div class="given-row">
+        <span class="given-tag pt">P₁</span>
+        <span class="given-text"><span class="mono">P₁(−1 | 0)</span></span>
+        <span class="given-explain">Punkt auf der Kurve (Nullstelle)</span>
+      </div>
+      <div class="given-row">
+        <span class="given-tag pt">P₂</span>
+        <span class="given-text"><span class="mono">P₂(2 | −2)</span></span>
+        <span class="given-explain">Punkt auf der Kurve</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schritt 1 — Gleichungen aufstellen</div>
+    <div class="info">
+      Der Hochpunkt liefert zwei Gleichungen: die Funktion selbst und die Ableitung (Steigung = 0 im Extrempunkt).
+    </div>
+    <div class="frow r">
+      <div class="frow-label">Ansatz</div>
+      <div class="frow-f"><span class="r">f(x) = ax³ + bx² + cx + d</span></div>
+      <div class="frow-f"><span class="r">f′(x) = 3ax² + 2bx + c</span></div>
+    </div>
+    <div class="frow g">
+      <div class="frow-label">HP: f(0) = 2</div>
+      <div class="frow-f">a·0 + b·0 + c·0 + d = 2 &nbsp;→&nbsp; <span class="g">d = 2</span></div>
+      <div class="frow-note">d ist sofort bekannt — der Hochpunkt liegt auf der y-Achse.</div>
+    </div>
+    <div class="frow t">
+      <div class="frow-label">HP: f′(0) = 0 (Steigung im Extrempunkt)</div>
+      <div class="frow-f">3a·0 + 2b·0 + c = 0 &nbsp;→&nbsp; <span class="t">c = 0</span></div>
+      <div class="frow-note">c ist auch sofort bekannt — weil xₑ = 0 sehr praktisch ist.</div>
+    </div>
+    <div class="frow b">
+      <div class="frow-label">P₁(−1 | 0) einsetzen: f(−1) = 0</div>
+      <div class="frow-f">−a + b + <span class="t">0</span> + <span class="g">2</span> = 0 &nbsp;→&nbsp; <span class="b">−a + b = −2</span> &nbsp;&nbsp;<span style="color:var(--hint);font-size:12px">(I)</span></div>
+    </div>
+    <div class="frow p">
+      <div class="frow-label">P₂(2 | −2) einsetzen: f(2) = −2</div>
+      <div class="frow-f">8a + 4b + <span class="t">0</span> + <span class="g">2</span> = −2 &nbsp;→&nbsp; <span class="p">8a + 4b = −4</span> &nbsp;÷4:&nbsp; <span class="p">2a + b = −1</span> &nbsp;&nbsp;<span style="color:var(--hint);font-size:12px">(II)</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schritt 2 — Gleichungssystem lösen</div>
+    <div class="sys-box">
+      <div class="sys-label">System (c=0, d=2 bereits bekannt)</div>
+      <div class="eq-row"><span class="eq-num">(I)</span><span class="eq-f"> −a + b = −2</span></div>
+      <div class="eq-row"><span class="eq-num">(II)</span><span class="eq-f"> 2a + b = −1</span></div>
+    </div>
+    <div class="frow b">
+      <div class="frow-label">(II) − (I): 3a = 1</div>
+      <div class="frow-f"><span class="b">a = ⅓</span></div>
+    </div>
+    <div class="frow p">
+      <div class="frow-label">a in (I): −⅓ + b = −2</div>
+      <div class="frow-f"><span class="p">b = −2 + ⅓ = −5/3</span></div>
+    </div>
+    <div class="result-banner">
+      <span class="res-label">Ergebnis:</span>
+      <span class="res-f">f(x) = ⅓x³ − 5/3·x² + 2</span>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem">
+    <canvas id="cv-1"></canvas>
+    <div class="legend">
+      <div class="li"><div class="lsw" style="background:var(--red)"></div> f(x) = ⅓x³ − 5/3x² + 2</div>
+      <div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--purple)"></div> Hochpunkt</div>
+      <div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--green)"></div> Gegebene Punkte</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PANEL 2: Cubic with symmetry ═══ -->
+<div id="ex-2" class="panel">
+
+  <div class="card">
+    <div class="card-title"><span class="badge">Beispiel 3</span> Symmetriebedingung reduziert das System</div>
+    <div class="info">
+      Hat eine kubische Funktion ihren <strong>Wendepunkt auf der y-Achse</strong> (bei x=0),
+      dann sind die Koeffizienten b und d automatisch null: <strong>f(x) = ax³ + cx</strong>.
+      Aus 4 Unbekannten werden so nur noch 2 — das System ist viel einfacher zu lösen.
+    </div>
+    <div class="given-box">
+      <div class="given-title">Gegeben</div>
+      <div class="given-row">
+        <span class="given-tag wp">WP</span>
+        <span class="given-text"><span class="mono">W(0 | 0)</span></span>
+        <span class="given-explain">Wendepunkt im Ursprung → b=0 und d=0</span>
+      </div>
+      <div class="given-row">
+        <span class="given-tag ext">HP</span>
+        <span class="given-text"><span class="mono">H(−1 | 2)</span></span>
+        <span class="given-explain">Hochpunkt → f(−1)=2 und f′(−1)=0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schritt 1 — Symmetrie ausnutzen</div>
+    <div class="info">
+      Ein Wendepunkt bei x=0 bedeutet f″(0)=0. Bei f(x)=ax³+bx²+cx+d ergibt sich f″(x)=6ax+2b,
+      also 6a·0+2b=0 → <strong>b=0</strong>. Und da W auf der x-Achse liegt: f(0)=d=0 → <strong>d=0</strong>.
+    </div>
+    <div class="frow t">
+      <div class="frow-label">Vereinfachter Ansatz durch Symmetrie</div>
+      <div class="frow-f"><span class="t">f(x) = ax³ + cx</span></div>
+      <div class="frow-f"><span class="t">f′(x) = 3ax² + c</span></div>
+      <div class="frow-note">Nur noch 2 Unbekannte: a und c.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schritt 2 — Gleichungen aufstellen</div>
+    <div class="frow b">
+      <div class="frow-label">HP: f(−1) = 2</div>
+      <div class="frow-f">a·(−1)³ + c·(−1) = 2 &nbsp;→&nbsp; <span class="b">−a − c = 2</span> &nbsp;&nbsp;<span style="color:var(--hint);font-size:12px">(I)</span></div>
+    </div>
+    <div class="frow p">
+      <div class="frow-label">HP: f′(−1) = 0</div>
+      <div class="frow-f">3a·(−1)² + c = 0 &nbsp;→&nbsp; <span class="p">3a + c = 0</span> &nbsp;&nbsp;<span style="color:var(--hint);font-size:12px">(II)</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schritt 3 — Gleichungssystem lösen</div>
+    <div class="sys-box">
+      <div class="sys-label">2×2 System</div>
+      <div class="eq-row"><span class="eq-num">(I)</span><span class="eq-f"> −a − c = 2</span></div>
+      <div class="eq-row"><span class="eq-num">(II)</span><span class="eq-f"> 3a + c = 0</span></div>
+    </div>
+    <div class="frow b">
+      <div class="frow-label">(I) + (II): 2a = 2</div>
+      <div class="frow-f"><span class="b">a = 1</span></div>
+    </div>
+    <div class="frow p">
+      <div class="frow-label">a in (II): 3·1 + c = 0</div>
+      <div class="frow-f"><span class="p">c = −3</span></div>
+    </div>
+    <div class="result-banner">
+      <span class="res-label">Ergebnis:</span>
+      <span class="res-f">f(x) = x³ − 3x</span>
+      <span style="font-size:13px;color:var(--muted)">(b=0, d=0 durch Symmetrie)</span>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem">
+    <canvas id="cv-2"></canvas>
+    <div class="legend">
+      <div class="li"><div class="lsw" style="background:var(--red)"></div> f(x) = x³ − 3x</div>
+      <div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--teal)"></div> Wendepunkt</div>
+      <div class="li"><div class="lsw" style="width:10px;height:10px;border-radius:50%;background:var(--purple)"></div> Hochpunkt</div>
+    </div>
+  </div>
+</div>
+
+<footer>Umgekehrte Kurvendiskussion · Gleichungssysteme</footer>
+</div>
+
+<script src="canvas-utils.js"></script>
+<script>
+// ── Canvas 0: f(x) = x²−2x+1 ──
+function drawC0(){
+  const r=setupCanvas('cv-0',0.5);if(!r)return;
+  const{ctx,w:W,h:H}=r;const C=colors();
+  const xR=[-1,4],yR=[-0.5,5];
+  const sc=makeCoords(xR,yR,W,H);
+  drawGrid(ctx,W,H,xR,yR,C,sc);
+  drawCurve(ctx,W,xR,yR,x=>x**2-2*x+1,C.curve,2.5,sc);
+  const pts=[{x:0,y:1,l:'P₁(0|1)'},{x:1,y:0,l:'P₂(1|0)'},{x:3,y:4,l:'P₃(3|4)'}];
+  pts.forEach((p,i)=>{
+    const[px,py]=sc(p.x,p.y);
+    drawPoint(ctx,px,py,C.green,C.bg);
+    ctx.fillStyle=C.green;ctx.font="500 11px 'DM Sans',sans-serif";
+    ctx.textAlign='left';ctx.fillText(p.l,px+8,py+(i===1?14:-10));
+  });
+}
+
+// ── Canvas 1: f(x) = ⅓x³ − 5/3x² + 2 ──
+function drawC1(){
+  const r=setupCanvas('cv-1',0.5);if(!r)return;
+  const{ctx,w:W,h:H}=r;const C=colors();
+  const xR=[-2,5],yR=[-4,4];
+  const sc=makeCoords(xR,yR,W,H);
+  drawGrid(ctx,W,H,xR,yR,C,sc);
+  const f=x=>(1/3)*x**3-(5/3)*x**2+2;
+  drawCurve(ctx,W,xR,yR,f,C.curve,2.5,sc);
+  // Hochpunkt
+  const[hpx,hpy]=sc(0,2);
+  drawPoint(ctx,hpx,hpy,C.purple,C.bg);
+  ctx.fillStyle=C.purple;ctx.font="500 11px 'DM Sans',sans-serif";ctx.textAlign='left';
+  ctx.fillText('H(0|2)',hpx+8,hpy-11);
+  // Punkte
+  [{x:-1,y:0,l:'P₁(−1|0)'},{x:2,y:-2,l:'P₂(2|−2)'}].forEach((p,i)=>{
+    const[px,py]=sc(p.x,p.y);
+    drawPoint(ctx,px,py,C.green,C.bg);
+    ctx.fillStyle=C.green;ctx.font="500 11px 'DM Sans',sans-serif";ctx.textAlign='left';
+    ctx.fillText(p.l,px+8,py+(i===0?14:-11));
+  });
+}
+
+// ── Canvas 2: f(x) = x³ − 3x ──
+function drawC2(){
+  const r=setupCanvas('cv-2',0.5);if(!r)return;
+  const{ctx,w:W,h:H}=r;const C=colors();
+  const xR=[-2.5,2.5],yR=[-3,3];
+  const sc=makeCoords(xR,yR,W,H);
+  drawGrid(ctx,W,H,xR,yR,C,sc);
+  drawCurve(ctx,W,xR,yR,x=>x**3-3*x,C.curve,2.5,sc);
+  // Wendepunkt
+  const[wpx,wpy]=sc(0,0);
+  drawPoint(ctx,wpx,wpy,C.teal,C.bg);
+  ctx.fillStyle=C.teal;ctx.font="500 11px 'DM Sans',sans-serif";ctx.textAlign='left';
+  ctx.fillText('W(0|0)',wpx+8,wpy-11);
+  // Hochpunkt
+  const[hpx,hpy]=sc(-1,2);
+  drawPoint(ctx,hpx,hpy,C.purple,C.bg);
+  ctx.fillStyle=C.purple;ctx.font="500 11px 'DM Sans',sans-serif";ctx.textAlign='left';
+  ctx.fillText('H(−1|2)',hpx+8,hpy-11);
+}
+
+// ── Tab switching ──
+function showEx(n){
+  document.querySelectorAll('.ex-tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+  setTimeout(()=>{
+    if(n===0) drawC0();
+    if(n===1) drawC1();
+    if(n===2) drawC2();
+  },20);
+}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded',()=>{ drawC0(); });
+window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{
+  drawC0(); drawC1(); drawC2();
+});
+window.addEventListener('resize',()=>{
+  drawC0(); drawC1(); drawC2();
+});
+</script>
+</body>
+</html>
