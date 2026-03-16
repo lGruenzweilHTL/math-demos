@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grafisches Differenzieren</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Override: this demo uses a slightly warmer red */
+:root { --red: #c84b2f; }
+@media (prefers-color-scheme: dark) { :root { --red: #e8705a; } }
+
+/* Header — Instrument Serif */
+header h1 { font-family: 'Instrument Serif', serif; font-size: 32px; font-weight: 400; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 6px; }
+header h1 em { font-style: italic; color: var(--red); }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+.tab { flex: 1; padding: 8px 12px; border-radius: 9px; border: none; background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; text-align: center; line-height: 1.3; }
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--surface); color: var(--text); border: 0.5px solid var(--border2); }
+.tab .tab-sub { font-size: 11px; font-weight: 400; color: var(--hint); display: block; margin-top: 1px; }
+.tab.active .tab-sub { color: var(--muted); }
+
+/* Controls label */
+.ctrl-label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--hint); margin-bottom: 10px; }
+
+/* Piecewise warning */
+.warn-box { background: rgba(180,83,9,0.10); border: 0.5px solid var(--amber); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--amber); margin-bottom: 10px; display: none; }
+@media (prefers-color-scheme: dark) { .warn-box { background: rgba(251,191,36,0.12); color: var(--amber); border-color: var(--amber); } }
+
+/* 4-column results strip */
+.results { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+@media (max-width: 540px) { .results { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Grafisches <em>Differenzieren</em></h1>
+  <p>Ableitungen lesen, ohne zu rechnen — durch Tangenten und Steigungen.</p>
+</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('linear')">
+    Linear
+    <span class="tab-sub">konstante Ableitung</span>
+  </button>
+  <button class="tab" onclick="switchTab('piecewise')">
+    Stückweise linear
+    <span class="tab-sub">Knicke &amp; Sprünge</span>
+  </button>
+  <button class="tab" onclick="switchTab('nonlinear')">
+    Nicht-linear
+    <span class="tab-sub">Tangente als Werkzeug</span>
+  </button>
+</div>
+
+<!-- ═══════════════ TAB 1: LINEAR ═══════════════ -->
+<div id="panel-linear" class="panel active">
+
+  <div class="info-box">
+    Bei einer <strong>linearen Funktion</strong> f(x) = mx + b ist die Steigung überall gleich.
+    Die Ableitung f′(x) ist daher eine <strong>konstante horizontale Gerade</strong>.
+    Verschiebe den Punkt — die Tangente ändert sich nicht.
+  </div>
+
+  <div class="ctrl-grid">
+    <div class="card">
+      <div class="ctrl-label">Funktion</div>
+      <select id="lin-func" onchange="linUpdate()">
+        <option value="1">f(x) = x + 1</option>
+        <option value="2">f(x) = 2x − 1</option>
+        <option value="3">f(x) = −x + 3</option>
+        <option value="4">f(x) = 0.5x + 2</option>
+        <option value="5">f(x) = −2x + 4</option>
+      </select>
+      <div class="slider-row">
+        <label>x₀</label>
+        <input type="range" id="lin-x0" min="-4" max="4" step="0.1" value="1" oninput="linUpdate()">
+        <span id="lin-x0-out" class="pill">1.0</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctrl-label">Ergebnisse</div>
+      <div class="results" style="grid-template-columns:repeat(2,1fr);">
+        <div class="ritem"><div class="rl">Steigung m</div><div class="rv"><span id="lin-m" class="pill red">—</span></div></div>
+        <div class="ritem"><div class="rl">f(x₀)</div><div class="rv"><span id="lin-fx" class="pill">—</span></div></div>
+        <div class="ritem"><div class="rl">f′(x₀)</div><div class="rv"><span id="lin-dfx" class="pill blue">—</span></div></div>
+        <div class="ritem"><div class="rl">f′ überall</div><div class="rv"><span id="lin-const" class="pill green">—</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem;">
+    <canvas id="lin-cv"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="lswatch" style="background:var(--curve);"></div> f(x)</div>
+      <div class="legend-item"><div class="lswatch dashed" style="color:var(--tangent);background:none;"></div> Tangente</div>
+      <div class="legend-item"><div class="lswatch" style="background:var(--deriv);"></div> f′(x) = const.</div>
+      <div class="legend-item"><div class="lswatch" style="width:10px;height:10px;border-radius:50%;background:var(--point);"></div> Punkt</div>
+    </div>
+  </div>
+
+  <div class="explain" id="lin-explain"></div>
+</div>
+
+<!-- ═══════════════ TAB 2: PIECEWISE ═══════════════ -->
+<div id="panel-piecewise" class="panel">
+
+  <div class="info-box">
+    Bei einer <strong>stückweise linearen Funktion</strong> hat jedes Teilstück seine eigene konstante Steigung.
+    An <strong>Knickpunkten</strong> ist die Ableitung nicht definiert — dort existiert keine eindeutige Tangente.
+    An <strong>Sprungstellen</strong> ist die Funktion selbst nicht stetig.
+  </div>
+
+  <div class="ctrl-grid">
+    <div class="card">
+      <div class="ctrl-label">Funktion</div>
+      <select id="pw-func" onchange="pwUpdate()">
+        <option value="0">Absolut: |x|</option>
+        <option value="1">Dach: Δ-Form</option>
+        <option value="2">Treppe (Sprünge)</option>
+        <option value="3">W-Form</option>
+      </select>
+      <div class="slider-row">
+        <label>x₀</label>
+        <input type="range" id="pw-x0" min="-4" max="4" step="0.05" value="1.5" oninput="pwUpdate()">
+        <span id="pw-x0-out" class="pill">1.5</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctrl-label">Ergebnisse</div>
+      <div class="results" style="grid-template-columns:repeat(2,1fr);">
+        <div class="ritem"><div class="rl">f(x₀)</div><div class="rv"><span id="pw-fx" class="pill red">—</span></div></div>
+        <div class="ritem"><div class="rl">Teilstück-Steigung</div><div class="rv"><span id="pw-slope" class="pill blue">—</span></div></div>
+        <div class="ritem"><div class="rl">f′(x₀)</div><div class="rv"><span id="pw-dfx" class="pill green">—</span></div></div>
+        <div class="ritem"><div class="rl">Status</div><div class="rv"><span id="pw-status" class="pill">—</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pw-warn" class="warn-box"></div>
+
+  <div class="card" style="padding:1rem;">
+    <canvas id="pw-cv"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="lswatch" style="background:var(--curve);"></div> f(x)</div>
+      <div class="legend-item"><div class="lswatch dashed" style="color:var(--tangent);background:none;"></div> Tangente (wo definiert)</div>
+      <div class="legend-item"><div class="lswatch" style="background:var(--deriv);"></div> f′(x)</div>
+    </div>
+  </div>
+
+  <div class="explain" id="pw-explain"></div>
+</div>
+
+<!-- ═══════════════ TAB 3: NONLINEAR ═══════════════ -->
+<div id="panel-nonlinear" class="panel">
+
+  <div class="info-box">
+    Bei <strong>nicht-linearen Funktionen</strong> ändert sich die Steigung an jedem Punkt.
+    Die Tangente an x₀ hat genau die Steigung f′(x₀). Die Ableitungsfunktion f′(x) zeigt,
+    wie sich diese Steigung über alle x verhält — <strong>Nullstellen von f′ = Extrempunkte von f</strong>.
+  </div>
+
+  <div class="ctrl-grid">
+    <div class="card">
+      <div class="ctrl-label">Funktion</div>
+      <select id="nl-func" onchange="nlUpdate()">
+        <option value="0">f(x) = x²</option>
+        <option value="1">f(x) = x³ − 3x</option>
+        <option value="2">f(x) = sin(x)</option>
+        <option value="3">f(x) = x⁴ − 4x²</option>
+        <option value="4">f(x) = eˣ</option>
+        <option value="5">f(x) = x² · e^(−x)</option>
+      </select>
+      <div class="slider-row">
+        <label>x₀</label>
+        <input type="range" id="nl-x0" min="-3.5" max="3.5" step="0.05" value="1" oninput="nlUpdate()">
+        <span id="nl-x0-out" class="pill">1.0</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctrl-label">Ergebnisse</div>
+      <div class="results" style="grid-template-columns:repeat(2,1fr);">
+        <div class="ritem"><div class="rl">f(x₀)</div><div class="rv"><span id="nl-fx" class="pill red">—</span></div></div>
+        <div class="ritem"><div class="rl">f′(x₀) = Steigung</div><div class="rv"><span id="nl-dfx" class="pill blue">—</span></div></div>
+        <div class="ritem"><div class="rl">Steigungswinkel α</div><div class="rv"><span id="nl-angle" class="pill green">—</span></div></div>
+        <div class="ritem"><div class="rl">Verhalten</div><div class="rv"><span id="nl-behavior" class="pill purple">—</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1rem;">
+    <canvas id="nl-cv"></canvas>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:6px;">
+      <div class="legend">
+        <div class="legend-item"><div class="lswatch" style="background:var(--curve);"></div> f(x)</div>
+        <div class="legend-item"><div class="lswatch dashed" style="color:var(--tangent);background:none;"></div> Tangente an x₀</div>
+        <div class="legend-item" id="nl-deriv-legend" style="opacity:0.35"><div class="lswatch" style="background:var(--deriv);"></div> f′(x)</div>
+        <div class="legend-item"><div class="lswatch" style="width:10px;height:10px;border-radius:50%;background:var(--point);"></div> Punkt x₀</div>
+      </div>
+      <button id="nl-toggle-deriv" onclick="nlToggleDeriv()" style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:5px 12px;border-radius:7px;border:0.5px solid var(--deriv);background:var(--surface2);color:var(--deriv);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;">f′(x) einblenden</button>
+    </div>
+  </div>
+
+  <div class="explain" id="nl-explain"></div>
+</div>
+
+<footer>Grafisches Differenzieren · keine externen Abhängigkeiten</footer>
+</div><!-- .page -->
+
+<script src="canvas-utils.js"></script>
+<script>
+// ═══════════════ TAB SWITCHING ═══════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['linear','piecewise','nonlinear'];
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  setTimeout(() => {
+    if (name==='linear') { setupLin(); linUpdate(); }
+    if (name==='piecewise') { setupPw(); pwUpdate(); }
+    if (name==='nonlinear') { setupNl(); nlUpdate(); }
+  }, 10);
+}
+
+// ═══════════════ TAB 1: LINEAR ═══════════════
+const linFuncs = [
+  { f: x=>x+1,      m:1,    b:1,   label:'f(x) = x + 1',    dfLabel:"f′(x) = 1" },
+  { f: x=>2*x-1,    m:2,    b:-1,  label:'f(x) = 2x − 1',   dfLabel:"f′(x) = 2" },
+  { f: x=>-x+3,     m:-1,   b:3,   label:'f(x) = −x + 3',   dfLabel:"f′(x) = −1" },
+  { f: x=>0.5*x+2,  m:0.5,  b:2,   label:'f(x) = 0.5x + 2', dfLabel:"f′(x) = 0.5" },
+  { f: x=>-2*x+4,   m:-2,   b:4,   label:'f(x) = −2x + 4',  dfLabel:"f′(x) = −2" },
+];
+let linCtx, linW, linH;
+
+function setupLin() {
+  const r = setupCanvas('lin-cv');
+  linCtx=r.ctx; linW=r.w; linH=r.h;
+}
+
+function linUpdate() {
+  if (!linCtx) return;
+  const idx = +document.getElementById('lin-func').value - 1;
+  const fn = linFuncs[idx];
+  const x0 = parseFloat(document.getElementById('lin-x0').value);
+  document.getElementById('lin-x0-out').textContent = x0.toFixed(1);
+
+  const fx = fn.f(x0);
+  document.getElementById('lin-m').textContent = fn.m.toFixed(1);
+  document.getElementById('lin-fx').textContent = fx.toFixed(2);
+  document.getElementById('lin-dfx').textContent = fn.m.toFixed(2);
+  document.getElementById('lin-const').textContent = fn.m.toFixed(2);
+
+  const C = colors();
+  const xR = [-5,5], yR = [-6,8];
+  const sc = makeCoords(xR, yR, linW, linH);
+  drawGrid(linCtx, linW, linH, xR, yR, C, sc);
+
+  // f(x)
+  drawCurve(linCtx, linW, xR, yR, fn.f, C.curve, 2.5, sc);
+
+  // f'(x) = const horizontal line
+  drawCurve(linCtx, linW, xR, yR, ()=>fn.m, C.deriv, 1.8, sc);
+
+  // Tangent (same as f here, shown shorter)
+  const tl = 1.8;
+  const [tx1,ty1] = sc(x0-tl, fn.f(x0-tl));
+  const [tx2,ty2] = sc(x0+tl, fn.f(x0+tl));
+  drawTangent(linCtx, 0, 0, tx1, ty1, tx2, ty2, C.tangent);
+
+  // Point
+  const [px0,py0] = sc(x0, fx);
+  drawAngleArc(linCtx, px0, py0, tx1, ty1, tx2, ty2, C, linW);
+  drawPoint(linCtx, px0, py0, C.point, C.bg);
+
+  // Point label
+  linCtx.fillStyle = C.point;
+  linCtx.font = "500 12px 'DM Sans',sans-serif"; linCtx.textAlign='left';
+  linCtx.fillText(`(${x0.toFixed(1)}, ${fx.toFixed(1)})`, px0+9, py0-8);
+
+  const mDesc = fn.m > 0 ? 'positiv (steigend)' : fn.m < 0 ? 'negativ (fallend)' : 'null (waagerecht)';
+  document.getElementById('lin-explain').innerHTML =
+    `<strong>${fn.label}</strong> hat die konstante Steigung m = <strong>${fn.m}</strong>. `+
+    `Die Ableitung ist daher <strong>${fn.dfLabel}</strong> — eine waagerechte Gerade auf Höhe ${fn.m}. `+
+    `Die Tangente an <em>jedem</em> Punkt hat dieselbe Steigung: <strong>${fn.m}</strong> (${mDesc}). `+
+    `Verschiebe x₀ — die Steigung bleibt unverändert.`;
+}
+
+// ═══════════════ TAB 2: PIECEWISE ═══════════════
+const pwFuncs = [
+  {
+    name: '|x|',
+    f: x => Math.abs(x),
+    df: x => x > 0 ? 1 : x < 0 ? -1 : null,
+    breakpoints: [0],
+    segments: [{ from:-Infinity, to:0, slope:-1 },{ from:0, to:Infinity, slope:1 }],
+    xR: [-4,4], yR: [-0.5,5],
+    explain: (x,slope,bp) => bp
+      ? `An der Knickstelle x = 0 existiert <strong>keine eindeutige Tangente</strong> — von links kommt Steigung −1, von rechts Steigung +1. Daher ist f′(0) <strong>nicht definiert</strong>.`
+      : `Im Teilstück ${x<0?'x < 0':'x > 0'} gilt konstante Steigung <strong>${slope}</strong>. Die Ableitung ist dort f′(x) = <strong>${slope}</strong>.`
+  },
+  {
+    name: 'Dach',
+    f: x => x < -2 ? 0 : x < 0 ? x+2 : x < 2 ? -x+2 : 0,
+    df: x => { if(x<-2||x>2) return 0; if(x===-2||x===0||x===2) return null; return x<0?1:-1; },
+    breakpoints: [-2,0,2],
+    segments:[{from:-Infinity,to:-2,slope:0},{from:-2,to:0,slope:1},{from:0,to:2,slope:-1},{from:2,to:Infinity,slope:0}],
+    xR:[-5,5], yR:[-1,4],
+    explain:(x,slope,bp)=>bp
+      ?`An der Knickstelle x ≈ ${x.toFixed(1)} stoßen zwei Teilstücke mit verschiedenen Steigungen zusammen. f′ ist hier <strong>nicht definiert</strong>.`
+      :`In diesem Teilstück ist die Steigung konstant <strong>${slope}</strong>. Die Ableitung f′ ist hier <strong>${slope}</strong>.`
+  },
+  {
+    name: 'Treppe',
+    f: x => Math.floor(x),
+    df: x => { const frac = x - Math.floor(x); return (frac < 0.02 || frac > 0.98) ? null : 0; },
+    breakpoints: [-3,-2,-1,0,1,2,3],
+    segments:[],
+    xR:[-3.5,3.5], yR:[-4,4],
+    explain:(x,slope,bp)=>bp
+      ?`An der Sprungstelle x = ${Math.round(x)} ist die Treppenfunktion <strong>nicht stetig</strong> — sie macht einen Sprung. Weder Stetigkeit noch Ableitbarkeit sind hier gegeben.`
+      :`Zwischen den Sprüngen ist f(x) konstant, Steigung = 0. Die Ableitung ist dort f′(x) = <strong>0</strong>.`
+  },
+  {
+    name: 'W-Form',
+    f: x => x < -2 ? -x-2 : x < 0 ? x+2 : x < 2 ? -x+2 : x-2,
+    df: x => {
+      if(Math.abs(x+2)<0.08||Math.abs(x)<0.08||Math.abs(x-2)<0.08) return null;
+      if(x<-2) return -1; if(x<0) return 1; if(x<2) return -1; return 1;
+    },
+    breakpoints:[-2,0,2],
+    segments:[{from:-Infinity,to:-2,slope:-1},{from:-2,to:0,slope:1},{from:0,to:2,slope:-1},{from:2,to:Infinity,slope:1}],
+    xR:[-5,5], yR:[-1,4],
+    explain:(x,slope,bp)=>bp
+      ?`Knickpunkt bei x ≈ ${x.toFixed(1)}: zwei Teilstücke treffen aufeinander. Die Ableitung ist hier <strong>nicht definiert</strong>.`
+      :`Steigung in diesem Segment: <strong>${slope}</strong>. Die Ableitungsfunktion springt an den Knickpunkten zwischen +1 und −1.`
+  }
+];
+
+let pwCtx, pwW, pwH;
+
+function setupPw() {
+  const r = setupCanvas('pw-cv');
+  pwCtx=r.ctx; pwW=r.w; pwH=r.h;
+}
+
+function pwUpdate() {
+  if (!pwCtx) return;
+  const idx = +document.getElementById('pw-func').value;
+  const fn = pwFuncs[idx];
+  const x0 = parseFloat(document.getElementById('pw-x0').value);
+  document.getElementById('pw-x0-out').textContent = x0.toFixed(2);
+
+  let fx; try { fx = fn.f(x0); } catch(e) { fx = NaN; }
+  const dfx = fn.df(x0);
+  const isBreak = dfx === null;
+  const nearBreak = fn.breakpoints.some(b => Math.abs(x0-b) < 0.15);
+
+  document.getElementById('pw-fx').textContent = isFinite(fx) ? fx.toFixed(2) : '—';
+  document.getElementById('pw-slope').textContent = isBreak ? '—' : (dfx != null ? dfx.toFixed(1) : '—');
+  document.getElementById('pw-dfx').textContent = isBreak ? 'undef.' : (dfx != null ? dfx.toFixed(1) : '—');
+  document.getElementById('pw-status').textContent = isBreak ? '⚠ Knick' : '✓ diffbar';
+
+  const warnEl = document.getElementById('pw-warn');
+  if (nearBreak || isBreak) {
+    warnEl.style.display='block';
+    warnEl.textContent = fn.name === 'Treppe'
+      ? `x₀ ≈ ${x0.toFixed(2)} liegt nahe einer Sprungstelle — f ist hier nicht stetig, also auch nicht ableitbar.`
+      : `x₀ ≈ ${x0.toFixed(2)} liegt nahe einem Knickpunkt — die Ableitung ist dort nicht definiert.`;
+  } else { warnEl.style.display='none'; }
+
+  document.getElementById('pw-explain').innerHTML = fn.explain(x0, dfx, isBreak||nearBreak);
+
+  const C = colors();
+  const sc = makeCoords(fn.xR, fn.yR, pwW, pwH);
+  drawGrid(pwCtx, pwW, pwH, fn.xR, fn.yR, C, sc);
+
+  // f(x) — draw piecewise carefully
+  if (idx === 2) {
+    // Staircase: draw each step separately
+    for (let i = -4; i <= 4; i++) {
+      const [sx1] = sc(i, i); const [sx2] = sc(i+1, i);
+      const [,sy] = sc(i, i);
+      pwCtx.strokeStyle = C.curve; pwCtx.lineWidth = 2.5;
+      pwCtx.beginPath(); pwCtx.moveTo(sx1, sy); pwCtx.lineTo(sx2, sy); pwCtx.stroke();
+      // open circle at start, closed at end
+      pwCtx.strokeStyle = C.curve; pwCtx.lineWidth = 1.5;
+      pwCtx.beginPath(); pwCtx.arc(sx1, sy, 3.5, 0, 2*Math.PI); pwCtx.fillStyle=C.bg; pwCtx.fill(); pwCtx.stroke();
+      pwCtx.beginPath(); pwCtx.arc(sx2, sy, 3.5, 0, 2*Math.PI); pwCtx.fillStyle=C.curve; pwCtx.fill();
+    }
+  } else {
+    drawCurve(pwCtx, pwW, fn.xR, fn.yR, fn.f, C.curve, 2.5, sc);
+    // Mark breakpoints
+    fn.breakpoints.forEach(b => {
+      const yb = fn.f(b);
+      if (!isFinite(yb)) return;
+      const [bx,by] = sc(b, yb);
+      pwCtx.strokeStyle = C.warn; pwCtx.lineWidth = 1.5;
+      pwCtx.beginPath(); pwCtx.arc(bx,by,5,0,2*Math.PI); pwCtx.fillStyle=C.bg; pwCtx.fill(); pwCtx.stroke();
+    });
+  }
+
+  // f'(x) — derivative
+  if (idx !== 2) {
+    // Draw derivative as step function
+    fn.segments.forEach(seg => {
+      const x1 = Math.max(seg.from, fn.xR[0]);
+      const x2 = Math.min(seg.to, fn.xR[1]);
+      if (x1 >= x2) return;
+      pwCtx.strokeStyle = C.deriv; pwCtx.lineWidth = 1.8;
+      const [sx1,sy1] = sc(x1, seg.slope);
+      const [sx2,sy2] = sc(x2, seg.slope);
+      pwCtx.beginPath(); pwCtx.moveTo(sx1,sy1); pwCtx.lineTo(sx2,sy2); pwCtx.stroke();
+      // open circles at breakpoints
+      fn.breakpoints.forEach(b => {
+        if (b > x1 && b < x2+0.01) {
+          const [bx,by] = sc(b, seg.slope);
+          pwCtx.beginPath(); pwCtx.arc(bx,by,3.5,0,2*Math.PI); pwCtx.fillStyle=C.bg; pwCtx.fill();
+          pwCtx.strokeStyle = C.deriv; pwCtx.lineWidth=1.2; pwCtx.stroke();
+        }
+      });
+    });
+  } else {
+    // Derivative of floor is 0 everywhere except jumps
+    const [sx1] = sc(fn.xR[0], 0); const [sx2] = sc(fn.xR[1], 0);
+    const [,sy] = sc(0,0);
+    pwCtx.strokeStyle = C.deriv; pwCtx.lineWidth = 1.8;
+    pwCtx.setLineDash([6,4]);
+    pwCtx.beginPath(); pwCtx.moveTo(sx1,sy); pwCtx.lineTo(sx2,sy); pwCtx.stroke();
+    pwCtx.setLineDash([]);
+  }
+
+  // Tangent and point
+  if (!isBreak && !nearBreak && isFinite(fx) && dfx !== null) {
+    const slope = dfx;
+    const tl = (fn.xR[1]-fn.xR[0]) * 0.20;
+    const [tx1,ty1] = sc(x0-tl, fx-slope*tl);
+    const [tx2,ty2] = sc(x0+tl, fx+slope*tl);
+    drawTangent(pwCtx, 0,0, tx1,ty1, tx2,ty2, C.tangent);
+    const [px0,py0] = sc(x0, fx);
+    drawAngleArc(pwCtx, px0,py0, tx1,ty1,tx2,ty2, C, pwW);
+    drawPoint(pwCtx, px0, py0, C.point, C.bg);
+  } else if (isFinite(fx)) {
+    const [px0,py0] = sc(x0, fx);
+    pwCtx.strokeStyle = C.warn; pwCtx.lineWidth = 2;
+    const r = 6;
+    pwCtx.beginPath(); pwCtx.moveTo(px0-r,py0-r); pwCtx.lineTo(px0+r,py0+r); pwCtx.stroke();
+    pwCtx.beginPath(); pwCtx.moveTo(px0+r,py0-r); pwCtx.lineTo(px0-r,py0+r); pwCtx.stroke();
+  }
+}
+
+// ═══════════════ TAB 3: NONLINEAR ═══════════════
+const nlFuncs = [
+  {
+    label:'f(x) = x²', dfLabel:"f′(x) = 2x",
+    f: x=>x*x, df: x=>2*x,
+    xR:[-3.5,3.5], yR:[-1,10],
+    extrema:[{x:0,type:'Minimum'}]
+  },
+  {
+    label:'f(x) = x³ − 3x', dfLabel:"f′(x) = 3x² − 3",
+    f: x=>x*x*x-3*x, df: x=>3*x*x-3,
+    xR:[-3,3], yR:[-5,5],
+    extrema:[{x:-1,type:'Maximum'},{x:1,type:'Minimum'}]
+  },
+  {
+    label:'f(x) = sin(x)', dfLabel:"f′(x) = cos(x)",
+    f: x=>Math.sin(x), df: x=>Math.cos(x),
+    xR:[-4,4], yR:[-2,2],
+    extrema:[{x:-Math.PI/2,type:'Minimum'},{x:Math.PI/2,type:'Maximum'}]
+  },
+  {
+    label:'f(x) = x⁴ − 4x²', dfLabel:"f′(x) = 4x³ − 8x",
+    f: x=>x*x*x*x-4*x*x, df: x=>4*x*x*x-8*x,
+    xR:[-3,3], yR:[-6,6],
+    extrema:[{x:-Math.sqrt(2),type:'Minimum'},{x:0,type:'Maximum'},{x:Math.sqrt(2),type:'Minimum'}]
+  },
+  {
+    label:'f(x) = eˣ', dfLabel:"f′(x) = eˣ",
+    f: x=>Math.exp(x), df: x=>Math.exp(x),
+    xR:[-3,3], yR:[-0.5,8],
+    extrema:[]
+  },
+  {
+    label:'f(x) = x²·e^(−x)', dfLabel:"f′(x) = (2x − x²)·e^(−x)",
+    f: x=>x*x*Math.exp(-x), df: x=>(2*x-x*x)*Math.exp(-x),
+    xR:[-2,5], yR:[-0.5,4],
+    extrema:[{x:0,type:'Minimum'},{x:2,type:'Maximum'}]
+  },
+];
+
+let nlCtx, nlW, nlH;
+let nlShowDeriv = false;
+
+function setupNl() {
+  const r = setupCanvas('nl-cv');
+  nlCtx=r.ctx; nlW=r.w; nlH=r.h;
+}
+
+function nlUpdate() {
+  if (!nlCtx) return;
+  const idx = +document.getElementById('nl-func').value;
+  const fn = nlFuncs[idx];
+  const x0 = parseFloat(document.getElementById('nl-x0').value);
+
+  // Clamp x0 to range
+  const cx0 = Math.max(fn.xR[0]+0.1, Math.min(fn.xR[1]-0.1, x0));
+  document.getElementById('nl-x0').min = fn.xR[0]+0.1;
+  document.getElementById('nl-x0').max = fn.xR[1]-0.1;
+  document.getElementById('nl-x0-out').textContent = cx0.toFixed(2);
+
+  const fx = fn.f(cx0);
+  const dfx = fn.df(cx0);
+  const angleDeg = Math.atan(dfx)*180/Math.PI;
+
+  document.getElementById('nl-fx').textContent = fx.toFixed(2);
+  document.getElementById('nl-dfx').textContent = dfx.toFixed(2);
+  document.getElementById('nl-angle').textContent = angleDeg.toFixed(1)+'°';
+
+  const nearExtreme = fn.extrema.some(e => Math.abs(cx0-e.x) < 0.15);
+  const behavior = Math.abs(dfx) < 0.08 ? '≈ Extrempunkt' : dfx > 0 ? 'steigend ↗' : 'fallend ↘';
+  document.getElementById('nl-behavior').textContent = behavior;
+
+  const C = colors();
+  const sc = makeCoords(fn.xR, fn.yR, nlW, nlH);
+  drawGrid(nlCtx, nlW, nlH, fn.xR, fn.yR, C, sc);
+
+  // f(x)
+  drawCurve(nlCtx, nlW, fn.xR, fn.yR, fn.f, C.curve, 2.5, sc);
+
+  // f'(x)
+  if (nlShowDeriv) {
+    drawCurve(nlCtx, nlW, fn.xR, fn.yR, fn.df, C.deriv, 1.8, sc);
+
+    // Zero crossings of f' (extrema of f) — vertical dashed markers
+    fn.extrema.forEach(e => {
+      if (e.x < fn.xR[0] || e.x > fn.xR[1]) return;
+      const [ex] = sc(e.x, 0);
+      nlCtx.strokeStyle = C.deriv; nlCtx.lineWidth = 0.8;
+      nlCtx.globalAlpha = 0.35;
+      nlCtx.setLineDash([4,3]);
+      nlCtx.beginPath(); nlCtx.moveTo(ex,0); nlCtx.lineTo(ex,nlH); nlCtx.stroke();
+      nlCtx.setLineDash([]); nlCtx.globalAlpha=1;
+      // label
+      const [,ey] = sc(e.x, fn.yR[1]);
+      nlCtx.fillStyle = C.deriv;
+      nlCtx.font="11px 'DM Mono',monospace"; nlCtx.textAlign='center';
+      nlCtx.fillText(e.type, ex, ey+16);
+    });
+  }
+
+  // Tangent
+  const tl = (fn.xR[1]-fn.xR[0]) * 0.22;
+  const [tx1,ty1] = sc(cx0-tl, fx-dfx*tl);
+  const [tx2,ty2] = sc(cx0+tl, fx+dfx*tl);
+  drawTangent(nlCtx, 0,0, tx1,ty1, tx2,ty2, C.tangent);
+
+  // Derivative point on f' curve
+  if (nlShowDeriv) {
+    const dfAtX = fn.df(cx0);
+    const [dpx,dpy] = sc(cx0, dfAtX);
+    nlCtx.fillStyle = C.deriv; nlCtx.strokeStyle=C.bg; nlCtx.lineWidth=1.5;
+    nlCtx.beginPath(); nlCtx.arc(dpx,dpy,4,0,2*Math.PI); nlCtx.fill(); nlCtx.stroke();
+  }
+
+  // Main point
+  const [px0,py0] = sc(cx0, fx);
+  drawAngleArc(nlCtx, px0,py0, tx1,ty1,tx2,ty2, C, nlW);
+  drawPoint(nlCtx, px0, py0, C.point, C.bg);
+
+  // Labels
+  nlCtx.fillStyle = C.point;
+  nlCtx.font="500 12px 'DM Sans',sans-serif"; nlCtx.textAlign='left';
+  nlCtx.fillText(`(${cx0.toFixed(1)}, ${fx.toFixed(1)})`, px0+9, py0-8);
+
+  // Slope readout on f' axis
+  if (nlShowDeriv) {
+    const [dpx2,dpy2] = sc(cx0, fn.df(cx0));
+    nlCtx.fillStyle = C.deriv;
+    nlCtx.font="11px 'DM Mono',monospace"; nlCtx.textAlign='right';
+    nlCtx.fillText(`f′=${dfx.toFixed(2)}`, dpx2-8, dpy2-7);
+  }
+
+  // Explain
+  const extInfo = fn.extrema.length > 0
+    ? ` Extrempunkte von f liegen dort, wo f′(x) = 0: ` +
+      fn.extrema.map(e=>`x = ${e.x.toFixed(2)} (${e.type})`).join(', ') + '.'
+    : '';
+  document.getElementById('nl-explain').innerHTML =
+    `<strong>${fn.label}</strong>: An x₀ = ${cx0.toFixed(2)} beträgt die Steigung (= erste Ableitung) <strong>f′(${cx0.toFixed(2)}) = ${dfx.toFixed(2)}</strong>. `+
+    `Die Tangente macht mit der Waagerechten einen Winkel von <strong>${angleDeg.toFixed(1)}°</strong>. `+
+    `Die blaue Kurve f′(x) zeigt, wie sich die Steigung über alle x verändert — der blaue Punkt liegt genau bei (${cx0.toFixed(2)}, ${dfx.toFixed(2)}).`+
+    extInfo;
+}
+
+function nlToggleDeriv() {
+  nlShowDeriv = !nlShowDeriv;
+  const btn = document.getElementById('nl-toggle-deriv');
+  const legend = document.getElementById('nl-deriv-legend');
+  btn.textContent = nlShowDeriv ? "f′(x) ausblenden" : "f′(x) einblenden";
+  btn.style.color = nlShowDeriv ? 'var(--muted)' : 'var(--deriv)';
+  btn.style.borderColor = nlShowDeriv ? 'var(--border2)' : 'var(--deriv)';
+  legend.style.opacity = nlShowDeriv ? '1' : '0.35';
+  btn.textContent = nlShowDeriv ? "f′(x) ausblenden" : "f′(x) einblenden";
+  nlUpdate();
+}
+
+// ═══════════════ INIT ═══════════════
+window.addEventListener('DOMContentLoaded', () => {
+  setupLin(); linUpdate();
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  const active = document.querySelector('.tab.active');
+  const names = ['linear','piecewise','nonlinear'];
+  const idx = Array.from(document.querySelectorAll('.tab')).indexOf(active);
+  if (idx===0) linUpdate();
+  if (idx===1) pwUpdate();
+  if (idx===2) nlUpdate();
+});
+window.addEventListener('resize', () => {
+  const names = ['linear','piecewise','nonlinear'];
+  const active = document.querySelector('.tab.active');
+  const idx = Array.from(document.querySelectorAll('.tab')).indexOf(active);
+  if (idx===0) { setupLin(); linUpdate(); }
+  if (idx===1) { setupPw(); pwUpdate(); }
+  if (idx===2) { setupNl(); nlUpdate(); }
+});
+</script>
+</body>
+</html>
