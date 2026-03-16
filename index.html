@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathe-Demos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 2rem;
+}
+
+.demo-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem 1.1rem;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.demo-card:hover {
+  border-color: var(--border2);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+.demo-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 5px;
+  align-self: flex-start;
+}
+
+.demo-tag.red    { background: rgba(184,64,32,0.12); color: var(--red); }
+.demo-tag.blue   { background: rgba(26,86,150,0.12); color: var(--blue); }
+.demo-tag.green  { background: rgba(30,110,58,0.12); color: var(--green); }
+.demo-tag.purple { background: rgba(107,58,158,0.12); color: var(--purple); }
+
+@media (prefers-color-scheme: dark) {
+  .demo-tag.red    { background: rgba(224,96,64,0.15);   color: var(--red); }
+  .demo-tag.blue   { background: rgba(91,163,232,0.15);  color: var(--blue); }
+  .demo-tag.green  { background: rgba(78,194,122,0.15);  color: var(--green); }
+  .demo-tag.purple { background: rgba(176,122,224,0.15); color: var(--purple); }
+}
+
+.demo-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.demo-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.demo-arrow {
+  font-size: 13px;
+  color: var(--hint);
+  margin-top: auto;
+  padding-top: 6px;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1 style="font-size:28px;font-weight:500;margin-bottom:6px;">Mathe-Demos</h1>
+  <p>Interaktive Visualisierungen für die Analysis — zum Erkunden und Verstehen.</p>
+</header>
+
+<div class="demo-grid">
+
+  <a class="demo-card" href="steigungswinkel.html">
+    <span class="demo-tag red">Trigonometrie</span>
+    <span class="demo-title">Steigungswinkel</span>
+    <span class="demo-desc">Zusammenhang zwischen Steigung und Winkel — mit Tangente, Steigungsdreieck und Winkeldarstellung.</span>
+    <span class="demo-arrow">Öffnen →</span>
+  </a>
+
+  <a class="demo-card" href="grafisches-differenzieren.html">
+    <span class="demo-tag blue">Differenzialrechnung</span>
+    <span class="demo-title">Grafisches Differenzieren</span>
+    <span class="demo-desc">Ableitung einer Funktion zeichnen — für lineare, stückweise und nichtlineare Funktionen.</span>
+    <span class="demo-arrow">Öffnen →</span>
+  </a>
+
+  <a class="demo-card" href="kurvendiskussion.html">
+    <span class="demo-tag green">Analysis</span>
+    <span class="demo-title">Kurvendiskussion</span>
+    <span class="demo-desc">Schritt für Schritt vom Funktionsterm zur gezeichneten Kurve — Nullstellen, Extrempunkte, Wendepunkt.</span>
+    <span class="demo-arrow">Öffnen →</span>
+  </a>
+
+  <a class="demo-card" href="umgekehrte-kurvendiskussion.html">
+    <span class="demo-tag purple">Analysis</span>
+    <span class="demo-title">Umgekehrte Kurvendiskussion</span>
+    <span class="demo-desc">Von gegebenen Punkten und Bedingungen zur Funktionsgleichung — mithilfe von Gleichungssystemen.</span>
+    <span class="demo-arrow">Öffnen →</span>
+  </a>
+
+</div>
+</div>
+</body>
+</html>
