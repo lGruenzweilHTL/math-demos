@@ -175,6 +175,7 @@ const FUNCS = [
     fStr:  'x³ − 3x',
     f1Str: '3x² − 3',
     f2Str: '6x',
+    factoredStr: 'x² − 3',
     degree: 3, leadPos: true, noConstant: true,
     nullstellen: () => solveNumeric(x => x**3 - 3*x, -2.5, 2.5),
     extrema: () => [
@@ -196,6 +197,7 @@ const FUNCS = [
     fStr:  'x³ − 12x',
     f1Str: '3x² − 12',
     f2Str: '6x',
+    factoredStr: 'x² − 12',
     degree: 3, leadPos: true, noConstant: true,
     nullstellen: () => solveNumeric(x => x**3 - 12*x, -4.5, 4.5),
     extrema: () => [
@@ -255,6 +257,7 @@ const FUNCS = [
     fStr:  '−x³ + 4x',
     f1Str: '−3x² + 4',
     f2Str: '−6x',
+    factoredStr: '−x² + 4',
     degree: 3, leadPos: false, noConstant: true,
     nullstellen: () => solveNumeric(x => -(x**3) + 4*x, -2.5, 2.5),
     extrema: () => {
@@ -412,7 +415,7 @@ function renderStep1(fn) {
       </div>
       <div class="fstep blue">
         <span class="fstep-label">x herausklammern</span>
-        <span class="fstep-formula">${fn.fStr} = <span class="blu">x · (${fn.f1Str.replace(/^[0-9-]+x/, s => s.replace('x','')+'x') || '...'})</span></span>
+        <span class="fstep-formula">${fn.fStr} = <span class="blu">x · (${fn.factoredStr})</span></span>
         <span class="fstep-explain">Daraus folgt sofort: <strong>x₁ = 0</strong> ist eine Nullstelle.</span>
       </div>
       <div class="fstep blue">
